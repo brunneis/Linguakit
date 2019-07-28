@@ -90,11 +90,7 @@ sub sentences {
 		$texto =~ s/$mark_abr/\./g;
 		$texto =~ s/$mark_sigla/\./g;
 
-		if($Sentences::pipe){#<ignore-line>
-			print $texto;#<ignore-line>
-		}else{#<ignore-line>
-			push (@saida, split("\n", $texto));
-		}#<ignore-line>
+		push (@saida, split("\n", $texto));
 
 	}
 	print join("\n", @saida);
