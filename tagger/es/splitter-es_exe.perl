@@ -15,56 +15,55 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-# Absolute path 
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
+sub init() {
+	# Absolute path 
+	use File::Basename;#<ignore-line>
+	my $abs_path = ".";#<string>
+	$abs_path = dirname(__FILE__);#<ignore-line>
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
+	##ficheiros de recursos
+	my $VERB;#<file>
+	open ($VERB, $abs_path."/lexicon/verbos-es.txt") or die "O ficheiro verbos-es não pode ser aberto: $!\n";
+	binmode VERB,  ':utf8';#<ignore-line>
+	my $IMP;#<file>
+	open ($IMP, $abs_path."/lexicon/imperativos-es.txt") or die "O ficheiro verbos-es não pode ser aberto: $!\n";
+	binmode IMP,  ':utf8';#<ignore-line>
 
-##ficheiros de recursos
-my $VERB;#<file>
-open ($VERB, $abs_path."/lexicon/verbos-es.txt") or die "O ficheiro verbos-es não pode ser aberto: $!\n";
-binmode VERB,  ':utf8';#<ignore-line>
-my $IMP;#<file>
-open ($IMP, $abs_path."/lexicon/imperativos-es.txt") or die "O ficheiro verbos-es não pode ser aberto: $!\n";
-binmode IMP,  ':utf8';#<ignore-line>
+	##variaveis globais
+	##para sentences e tokens:
+	my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
+	my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
+	my $Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\-\€\·\¬\…]/;#<string>
+	my $Punct_urls = qr/[\:\/\~]/;#<string>
 
-##variaveis globais
-##para sentences e tokens:
-my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
-my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
-my $Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\-\€\·\¬\…]/;#<string>
-my $Punct_urls = qr/[\:\/\~]/;#<string>
+	##para splitter:
+	##########INFORMAÇAO DEPENDENTE DA LINGUA###################
+	$Splitter::pron = "(me|te|se|le|les|la|lo|las|los|nos|os)";#<string>
+	###########################################################
+	#my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜa-záéíóúàèìòùâêîôûñçü]";
 
-##para splitter:
-##########INFORMAÇAO DEPENDENTE DA LINGUA###################
-my $pron = "(me|te|se|le|les|la|lo|las|los|nos|os)";#<string>
-###########################################################
-#my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜa-záéíóúàèìòùâêîôûñçü]";
+	%Splitter::Verb;#<hash><integer>
+	while(my $verb = <$VERB>){#<string>
+		chomp $verb;
+		$Splitter::Verb{$verb}++;
+		#if ($verb eq "comer") {print "PROPONER: #$verb#\n";}
+		$verb =~ s/ar$/ár/;
+		$verb =~ s/er$/ér/;
+		$verb =~ s/ir$/ír/;
+		$Splitter::Verb{$verb}++; 
+		#print STDERR "TOKEN:: #$verb#\n";
+	}
+	close $VERB;
 
-my %Verb;#<hash><integer>
-while(my $verb = <$VERB>){#<string>
-	chomp $verb;
-	$Verb{$verb}++;
-	#if ($verb eq "comer") {print "PROPONER: #$verb#\n";}
-	$verb =~ s/ar$/ár/;
-	$verb =~ s/er$/ér/;
-	$verb =~ s/ir$/ír/;
-	$Verb{$verb}++; 
-	#print STDERR "TOKEN:: #$verb#\n";
+	%Splitter::Imp;#<hash><integer>
+	while(my $verb = <$IMP>){#<string>
+		chomp $verb;
+		$Splitter::Imp{$verb}++;
+		#if ($verb eq "comer") {print "PROPONER: #$verb#\n";}
+		#print STDERR "TOKEN:: #$verb#\n";
+	}
+	close $IMP;
 }
-close $VERB;
-
-my %Imp;#<hash><integer>
-while(my $verb = <$IMP>){#<string>
-	chomp $verb;
-	$Imp{$verb}++;
-	#if ($verb eq "comer") {print "PROPONER: #$verb#\n";}
-	#print STDERR "TOKEN:: #$verb#\n";
-}
-close $IMP;
 
 sub splitter {
 
@@ -91,19 +90,16 @@ sub splitter {
 			($verb,$tmp1,$tmp2 ) =  $token =~ /^(\w+r)(nos|os|se|te|me)(lo|los|las|los)$/i;
 
 			#print STDERR "---#$verb# - - #$tmp1# - #$tmp2#\n";
-			if ($Verb{lowercase($verb)}  && $token =~ /(ár|ér|ír)(nos|os|se|te|me)(lo|los|las|los)$/) {
+			if ($Splitter::Verb{lowercase($verb)}  && $token =~ /(ár|ér|ír)(nos|os|se|te|me)(lo|los|las|los)$/) {
 				# print STDERR "----> $verb\n#$tmp1#\n#$tmp2#\n";
 				$verb =~ s/ár/ar/;
 				$verb =~ s/ér/er/;
 				$verb =~ s/ír/ir/; 
 
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n$tmp2\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-					push (@saida, $tmp2);
-				}#<ignore-line>
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				push (@saida, $tmp2);
+				
 				$found=1;
 			}
 
@@ -119,16 +115,12 @@ sub splitter {
 		    }
 			$verb =~ y/áéíóú/aeiou/;
 			#print STDERR "OK----> #$verb#\n#$tmp1#\n#$tmp2#\n";
-			if ($Imp{lowercase($verb)}) {
+			if ($Splitter::Imp{lowercase($verb)}) {
 			 
-			
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n$tmp2\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-					push (@saida, $tmp2);
-				}#<ignore-line>
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				push (@saida, $tmp2);
+				
 				$found=1;
 			}
 
@@ -145,16 +137,12 @@ sub splitter {
 		    }
 		    $verb =~ y/áéíóú/aeiou/;
 			#print STDERR "OK----> #$verb#\n#$tmp1#\n#$tmp2#\n";
-		    if ($Imp{lowercase($verb)}) {
+		    if ($Splitter::Imp{lowercase($verb)}) {
 			 
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				push (@saida, $tmp2);
 			
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n$tmp2\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-					push (@saida, $tmp2);
-				}#<ignore-line>
 				$found=1;
 			}
 
@@ -171,16 +159,12 @@ sub splitter {
 		    }
 		    $verb =~ y/áéíóú/aeiou/;
 			#print STDERR "OK----> #$verb#\n#$tmp1#\n#$tmp2#\n";
-		    if ($Imp{lowercase($verb)}) {
+		    if ($Splitter::Imp{lowercase($verb)}) {
 			 
-			
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n$tmp2\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-					push (@saida, $tmp2);
-				}#<ignore-line>
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				push (@saida, $tmp2);
+				
 				$found=1;
 			}
 
@@ -193,16 +177,12 @@ sub splitter {
 		    }
 		    $verb =~ y/áéíóú/aeiou/;
 			#print STDERR "OK----> #$verb#\n#$tmp1#\n#$tmp2#\n";
-		    if ($Imp{lowercase($verb)}) {
+		    if ($Splitter::Imp{lowercase($verb)}) {
 			 
-			
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n$tmp2\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-					push (@saida, $tmp2);
-				}#<ignore-line>
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				push (@saida, $tmp2);
+				
 				$found=1;
 			}
 
@@ -212,39 +192,33 @@ sub splitter {
 	      
 		
 		################separar cliticos simples de verbos  em infinitivo 
-		if (!$found && $token =~ /^(\w+r)($pron)$/i && $token !~ /[áéíóú]/) {
-			($verb,$tmp1) =  $token =~ /^(\w+r)($pron)$/i;
-			#print STDERR "----#$verb# #$tmp1#\n" if ($Verb{$verb});
-			if ($Verb{lowercase($verb)}) {
-				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+		if (!$found && $token =~ /^(\w+r)($Splitter::pron)$/i && $token !~ /[áéíóú]/) {
+			($verb,$tmp1) =  $token =~ /^(\w+r)($Splitter::pron)$/i;
+			#print STDERR "----#$verb# #$tmp1#\n" if ($Splitter::Verb{$verb});
+			if ($Splitter::Verb{lowercase($verb)}) {
+			
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				   
 				$found=1;
 			} 
 		}
 		##imperativo 2 pessoa singular: cómelo (falta tratar monósilabos: vete, dale...)
-		if (!$found && $token =~ /^(\w+)($pron)$/i && $token =~ /[áéíóú]/ && $token !~ /mosnos$/) {
+		if (!$found && $token =~ /^(\w+)($Splitter::pron)$/i && $token =~ /[áéíóú]/ && $token !~ /mosnos$/) {
 		   
 		    if ($token =~ /nos$/i) {
 			($verb,$tmp1) =  $token =~ /^(\w+)(nos)$/i;
 		    }
 		    else {
-			($verb,$tmp1) =  $token =~ /^(\w+)($pron)$/i;
+			($verb,$tmp1) =  $token =~ /^(\w+)($Splitter::pron)$/i;
 		    }
 		    $verb =~ y/áéíóú/aeiou/;
 		    #print STDERR "----#$verb# #$tmp1#\n";
-		    if ($Imp{lowercase($verb)}) {
+		    if ($Splitter::Imp{lowercase($verb)}) {
 				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				  
 				$found=1;
 			} 
 		}
@@ -252,14 +226,11 @@ sub splitter {
 		if (!$found && $token =~ /^(vete|dale|vente)$/i) {
 		   ($verb,$tmp1) =  $token =~ /^(\w+)(te|le|nos|os)$/i;
 		
-		    if ($Imp{lowercase($verb)}) {
+		    if ($Splitter::Imp{lowercase($verb)}) {
 				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				
 				$found=1;
 			} 
 		}
@@ -268,70 +239,58 @@ sub splitter {
 			($verb,$tmp1) =  $token =~ /^(\w+[aeí])(os)$/i;
 			$verb =~ y/í/i/;
 			$verb =~ s/$/d/;
-			if ($Imp{lowercase($verb)}) {
+			if ($Splitter::Imp{lowercase($verb)}) {
 				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				 
 				$found=1;
 			} 
 		}
 		if (!$found && $token =~ /^(\w+[aei]d)(me|te|se|le|les|la|lo|las|los|nos)$/i) {
 			($verb,$tmp1) =  $token =~ /^(\w+[aei]d)(me|te|se|le|les|la|lo|las|los|nos)$/i;
 		    
-			#print STDERR "----#$verb# #$tmp1#\n" if ($Verb{$verb});
-		    if ($Imp{lowercase($verb)}) {
+			#print STDERR "----#$verb# #$tmp1#\n" if ($Splitter::Verb{$verb});
+		    if ($Splitter::Imp{lowercase($verb)}) {
 				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				
 				$found=1;
 			} 
 		}
 
 		##imperativo 1 pessoa plural: comámoslo, comámonos
-		if (!$found && $token =~ /^(\w+mo(s)?)($pron)$/i && $token =~ /[áéíóú]/) {
+		if (!$found && $token =~ /^(\w+mo(s)?)($Splitter::pron)$/i && $token =~ /[áéíóú]/) {
 		    if ($token =~ /nos$/i) {
 			($verb,$tmp1) =  $token =~ /^(\w+mo)(nos)$/i;
 			$verb =~ s/$/s/;
 			#print STDERR "----#$verb# #$tmp1#\n";
 		    }
 		    else {
-			($verb,$tmp1) =  $token =~ /^(\w+mos)($pron)$/i;
+			($verb,$tmp1) =  $token =~ /^(\w+mos)($Splitter::pron)$/i;
 		    }
 		    $verb =~ y/áéíóú/aeiou/;
 		    #print STDERR "----#$verb# #$tmp1#\n";
-		    if ($Imp{lowercase($verb)}) {
+		    if ($Splitter::Imp{lowercase($verb)}) {
 				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				 
 				$found=1;
 			} 
 		}
 		
 		##imperativo 3 pessoa plural: cómanlo, véanlo
-		if (!$found && $token =~ /^(\w+n)($pron)$/i && $token =~ /[áéíóú]/) {
-		    ($verb,$tmp1) =  $token =~ /^(\w+n)($pron)$/i;
+		if (!$found && $token =~ /^(\w+n)($Splitter::pron)$/i && $token =~ /[áéíóú]/) {
+		    ($verb,$tmp1) =  $token =~ /^(\w+n)($Splitter::pron)$/i;
 		    $verb =~ y/áéíóú/aeiou/;
-			#print STDERR "----#$verb# #$tmp1#\n" if ($Verb{$verb});
-		    if ($Imp{lowercase($verb)}) {
+			#print STDERR "----#$verb# #$tmp1#\n" if ($Splitter::Verb{$verb});
+		    if ($Splitter::Imp{lowercase($verb)}) {
 				
-				if($pipe){#<ignore-line>
-					print "$verb\n$tmp1\n";#<ignore-line>
-				}else{#<ignore-line>
-					push (@saida, $verb);
-					push (@saida, $tmp1);
-				}#<ignore-line>    
+				push (@saida, $verb);
+				push (@saida, $tmp1);
+				 
 				$found=1;
 			} 
 		}
@@ -344,29 +303,23 @@ sub splitter {
 			$verb =~ s/iéndo$/iendo/;
 			$verb =~ s/ándo$/ando/;
 			
-			if($pipe){#<ignore-line>
-				print "$verb\n$tmp1\n$tmp2\n";#<ignore-line> 
-			}else{#<ignore-line> 
-				push (@saida, $verb);
-				push (@saida, $tmp1);
-				push (@saida, $tmp2);
-			}#<ignore-line> 
+			push (@saida, $verb);
+			push (@saida, $tmp1);
+			push (@saida, $tmp2);
+			
 			$found=1;
 		}
 
 		##pronomes simples
-		if (!$found && $token =~ /^(\w+iéndo|\w+ándo)($pron)$/i) {
-			($verb,$tmp1) =  $token =~ /^(\w+iéndo|\w+ándo)($pron)$/i;
+		if (!$found && $token =~ /^(\w+iéndo|\w+ándo)($Splitter::pron)$/i) {
+			($verb,$tmp1) =  $token =~ /^(\w+iéndo|\w+ándo)($Splitter::pron)$/i;
 			#print STDERR "1---#$verb# - #$tmp1#\n";
 			$verb =~ s/iéndo$/iendo/;
 			$verb =~ s/ándo$/ando/;
 
-			if($pipe){#<ignore-line>
-				print "$verb\n$tmp1\n";#<ignore-line> 
-			}else{#<ignore-line> 
-				push (@saida, $verb);
-				push (@saida, $tmp1);
-			}#<ignore-line> 
+			push (@saida, $verb);
+			push (@saida, $tmp1);
+			
 			#print STDERR "2---#$verb# - #$tmp1#\n";
 			$found=1; 
 		}
@@ -377,48 +330,37 @@ sub splitter {
 		if (!$found && $token =~ /^[dD]el$/) {
 			($tmp1,$tmp2) =  $token =~ /^([dD]e)(l)$/; 
 			
-			if($pipe){#<ignore-line>
-				print "$tmp1\n";#<ignore-line>
-				print "e" . "$tmp2\n"   if  $token =~ /^d/;#<ignore-line>
-				print "E" . "$tmp2\n"   if  $token =~ /^D/;#<ignore-line>
-			}else{#<ignore-line> 
-				push (@saida, $tmp1);
-				push (@saida, "e" . $tmp2) if  $token =~ /^d/; 
-				push (@saida, "E" . $tmp2) if  $token =~ /^D/;
-			}#<ignore-line> 
+			push (@saida, $tmp1);
+			push (@saida, "e" . $tmp2) if  $token =~ /^d/; 
+			push (@saida, "E" . $tmp2) if  $token =~ /^D/;
+			
 			$found=1;
 		}elsif ($token =~ /^[aA]l$/) {
 			($tmp1,$tmp2) =  $token =~ /^([aA])(l)$/; 
-			
-			if($pipe){#<ignore-line>
-				print "$tmp1\n";#<ignore-line>
-				print "e" . "$tmp2\n"   if  $token =~ /^a/;#<ignore-line>
-				print "E" . "$tmp2\n"   if  $token =~ /^A/;#<ignore-line>
-			}else{#<ignore-line>
-				push (@saida, $tmp1);
-				push (@saida, "e" . $tmp2) if  $token =~ /^a/; 
-				push (@saida, "E" . $tmp2) if  $token =~ /^A/;	
-			}#<ignore-line>
+
+			push (@saida, $tmp1);
+			push (@saida, "e" . $tmp2) if  $token =~ /^a/; 
+			push (@saida, "E" . $tmp2) if  $token =~ /^A/;
+
 			$found=1;
 		}
 
 		if (!$found) {
-			if($pipe){#<ignore-line>
-				print "$token\n";#<ignore-line>
-			}else{#<ignore-line>
-				push (@saida, $token);
-			}#<ignore-line>
+			push (@saida, $token);
 		}
 		#if ($i == $#text && $token eq "")  {
 			#push (@saida, "");
 			#print "\n"; 
 		#}
 	}
+	print join("\n", @saida);
 	return \@saida;
 }
 
 #<ignore-block>
-if($pipe){
+$Sentences::pipe = !defined (caller);
+init();
+if($Sentences::pipe){
 	my @lines=<STDIN>;
 	splitter(\@lines);
 }
