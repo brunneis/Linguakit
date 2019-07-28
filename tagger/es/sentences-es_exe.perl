@@ -15,36 +15,35 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
+sub init {
+	# Absolute path 
+	use File::Basename;#<ignore-line>
+	my $abs_path = ".";#<string>
+	$abs_path = dirname(__FILE__);#<ignore-line>
 
-# Absolute path 
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
+	##ficheiros de recursos
+	my $ABR;#<file>
+	open ($ABR, $abs_path."/lexicon/abreviaturas-es.txt") or die "Faltam as abreviaturas: $!\n";
+	binmode $ABR,  ':utf8';#<ignore-line>
 
-##ficheiros de recursos
-my $ABR;#<file>
-open ($ABR, $abs_path."/lexicon/abreviaturas-es.txt") or die "Faltam as abreviaturas: $!\n";
-binmode $ABR,  ':utf8';#<ignore-line>
+	##variaveis globais
+	$Sentences::UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
+	$Sentences::LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
 
-##variaveis globais
-my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
-my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
+	$Sentences::Abr = "";#<string>
+	while(my $line = <$ABR>) { #<string>#lendo as abreviaturas...
+		chomp $line;
+		my ($abr, $trad);#<string>
+		($abr, $trad) = split (" ", $line) if ($line =~ /\./);
+		$abr =~ s/\./\\./g;
+		#$abr = lc $abr; ## Marcos: comento isto para dar cobertura a abreviaturas em maiúscula (Prof. X). Dupliquei as abreviaturas na lista
+		$Sentences::Abr .= "|" . "$abr" ;
+	}
+	close $ABR;
 
-my $Abr = "";#<string>
-while(my $line = <$ABR>) { #<string>#lendo as abreviaturas...
-	chomp $line;
-	my ($abr, $trad);#<string>
-	($abr, $trad) = split (" ", $line) if ($line =~ /\./);
-	$abr =~ s/\./\\./g;
-	#$abr = lc $abr; ## Marcos: comento isto para dar cobertura a abreviaturas em maiúscula (Prof. X). Dupliquei as abreviaturas na lista
-	$Abr .= "|" . "$abr" ;
+	$Sentences::Abr =~ s/\|[\|]+/\|/g;
+	$Sentences::Abr =~ s/^\|//g;
 }
-close $ABR;
-
-$Abr =~ s/\|[\|]+/\|/g;
-$Abr =~ s/^\|//g;
 
 sub sentences {
 	my @saida = ();#<list><string>
@@ -57,13 +56,13 @@ sub sentences {
 		my $mark_sigla= "<SIGLA-TMP>";#<string>
 
 		##identificando abreviaturas no texto e substitui-las por um marcador temporal
-		$texto =~ s/ ($Abr) / $1$mark_abr /ig;
+		$texto =~ s/ ($Sentences::Abr) / $1$mark_abr /ig;
 		#print STDERR "--#$texto#\n";
 
 		$texto =~ s/\.($mark_abr)/$1/g;
 
 		##identificar pontos dentro de urls, emails..
-		$texto =~ s/($LowerCase)\.($LowerCase)/$1$mark_sigla$2/g;
+		$texto =~ s/($Sentences::LowerCase)\.($Sentences::LowerCase)/$1$mark_sigla$2/g;
 
 		##identificar tres pontos
 		$texto =~ s/\.\.\./$mark_sigla$mark_sigla$mark_sigla/g;
@@ -73,10 +72,10 @@ sub sentences {
 
 		#Identificar siglas com ponto intermedio
 		#print STDERR "1#$texto#";
-		$texto =~ s/($UpperCase)\.($UpperCase)/$1$mark_sigla$2/g;
-		$texto =~ s/($mark_sigla$UpperCase)\.($UpperCase)/$1$mark_sigla$2/g;
+		$texto =~ s/($Sentences::UpperCase)\.($Sentences::UpperCase)/$1$mark_sigla$2/g;
+		$texto =~ s/($mark_sigla$Sentences::UpperCase)\.($Sentences::UpperCase)/$1$mark_sigla$2/g;
 
-		$texto =~ s/($mark_sigla$UpperCase)\.([\s]+)($LowerCase)/$1$mark_sigla$2$3/g; ##o P.P. está ....
+		$texto =~ s/($mark_sigla$Sentences::UpperCase)\.([\s]+)($Sentences::LowerCase)/$1$mark_sigla$2$3/g; ##o P.P. está ....
 
 		#print STDERR "2#$texto#";
 
@@ -91,22 +90,23 @@ sub sentences {
 		$texto =~ s/$mark_abr/\./g;
 		$texto =~ s/$mark_sigla/\./g;
 
-		if($pipe){#<ignore-line>
+		if($Sentences::pipe){#<ignore-line>
 			print $texto;#<ignore-line>
 		}else{#<ignore-line>
 			push (@saida, split("\n", $texto));
 		}#<ignore-line>
 
 	}
+	print join("\n", @saida);
 	return \@saida;
 
 }
 
 #<ignore-block>
-if($pipe){
+$Sentences::pipe = !defined (caller);
+init();
+if($Sentences::pipe){
 	my @lines=<STDIN>;
 	sentences(\@lines);
 }
 #<ignore-block>
-  
-  
