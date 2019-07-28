@@ -3,13 +3,13 @@
 ## Usage
 
 ```
-./linguakit.sh <module> <lang> <input> [options]>
+./linguakit.sh <module> <lang> <input> [options]
 ```
 
 or
 
 ```
-docker run -i brunneis/linguakit <module> <lang> <input> [options]>
+docker run -i brunneis/linguakit <module> <lang> <input> [options]
 ```
 
 ## Example
