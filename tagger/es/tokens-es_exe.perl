@@ -15,26 +15,25 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
+sub init {
+	# Absolute path 
+	use File::Basename;#<ignore-line>
+	my $abs_path = ".";#<string>
+	$abs_path = dirname(__FILE__);#<ignore-line>
 
-# Absolute path 
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
+	##variaveis globais
+	##para sentences e tokens:
+	my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
+	my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
+	$Tokens::Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…]/;#<string>
+	$Tokens::Punct_urls = qr/[\:\/\~]/;#<string>
 
-##variaveis globais
-##para sentences e tokens:
-my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
-my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
-my $Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…]/;#<string>
-my $Punct_urls = qr/[\:\/\~]/;#<string>
-
-##para splitter:
-##########INFORMAÇAO DEPENDENTE DA LINGUA###################
-#my $pron = "(me|te|se|le|les|la|lo|las|los|nos|os)";
-###########################################################
-my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜa-záéíóúàèìòùâêîôûñçü]";#<string>
+	##para splitter:
+	##########INFORMAÇAO DEPENDENTE DA LINGUA###################
+	#my $pron = "(me|te|se|le|les|la|lo|las|los|nos|os)";
+	###########################################################
+	my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜa-záéíóúàèìòùâêîôûñçü]";#<string>
+}
 
 sub tokens {
 	
@@ -71,9 +70,9 @@ sub tokens {
 		$sentence =~ s/([0-9]+)\'([0-9]+)/${1}$quote_quant$2 /g ;
 
 		#print STDERR "#$sentence#\n";
-		$sentence =~ s/($Punct)/ $1 /g ;
+		$sentence =~ s/($Tokens::Punct)/ $1 /g ;
 		#print STDERR "2#$sentence#\n";
-		$sentence =~ s/($Punct_urls)(?:[\s\n]|$)/ $1 /g  ; 
+		$sentence =~ s/($Tokens::Punct_urls)(?:[\s\n]|$)/ $1 /g  ; 
 
 		##hypen - no fim de palavra ou no principio:
 		$sentence =~ s/(\w)- /$1 - /g  ;
@@ -99,25 +98,21 @@ sub tokens {
 			$token =~ s/$comma_quant/\,/;
 			$token =~ s/$quote_quant/\'/;
 
-			if($pipe){#<ignore-line>
-				print "$token\n";#<ignore-line>
-			}else{#<ignore-line>
-				push (@saida, $token);
-			}#<ignore-line>
+			push (@saida, $token);
+
 		}
-	
-		if($pipe){#<ignore-line>
-			print "\n";#<ignore-line>
-		}else{#<ignore-line>
-			push (@saida, "");
-		}#<ignore-line>
+		push (@saida, "");
+		
 	}
 	
+	print join("\n", @saida);
 	return \@saida;
 }
 
 #<ignore-block>
-if($pipe){
+$Sentences::pipe = !defined (caller);
+init();
+if($Sentences::pipe){
 	my @tokens=<STDIN>;
 	tokens(\@tokens);
 }
