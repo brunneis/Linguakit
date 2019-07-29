@@ -10,6 +10,7 @@
 package Tagger;
 
 #<ignore-block>
+use Storable qw(dclone);
 use strict; 
 binmode STDIN, ':utf8';
 binmode STDOUT, ':utf8';
@@ -17,69 +18,73 @@ use utf8;
 #<ignore-block>
 
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
+sub init() {
+	# Absolute path 
+	use File::Basename;#<ignore-line>
+	my $abs_path = ".";#<string>
+	$abs_path = dirname(__FILE__);#<ignore-line>
 
-# Absolute path 
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
+	my $MODEL;#<file>
+	open ($MODEL, $abs_path."/model/train-es") or die "O ficheiro train-es não pode ser aberto: $!\n";
+	binmode $MODEL,  ':utf8';#<ignore-line>
 
-my $MODEL;#<file>
-open ($MODEL, $abs_path."/model/train-es") or die "O ficheiro train-es não pode ser aberto: $!\n";
-binmode $MODEL,  ':utf8';#<ignore-line>
-
-##variabeis globais
-my $w=1; #<string>#mesma janela/window que no treino
-my $Border = "(Fp|<blank>)";#<string>
-my @cat_open = ("NC", "VMI", "VMS", "VMG", "VMP", "VMN", "RG", "AQ");#<array><string>
-#my @cat_open = ("NC", "VMI", "RG", "AQ");
+	##variabeis globais
+	$Tagger::w=1; #<string>#mesma janela/window que no treino
+	$Tagger::Border = "(Fp|<blank>)";#<string>
+	@Tagger::cat_open = ("NC", "VMI", "VMS", "VMG", "VMP", "VMN", "RG", "AQ");#<array><string>
+	#my @cat_open = ("NC", "VMI", "RG", "AQ");
 
 
-my $N;#<double>
-my %PriorProb=();#<hash><hash><double>
-my %ProbCat=();#<hash><double>
-my %featFreq=();#<hash><double>
+	$Tagger::N_init;#<double>
+	%Tagger::PriorProb_init=();#<hash><hash><double>
+	%Tagger::ProbCat_init=();#<hash><double>
+	%Tagger::featFreq_init=();#<hash><double>
 
-#####################
-#                   #
-#    READING TRAIN  #
-#                   #
-#####################
+	#####################
+	#                   #
+	#    READING TRAIN  #
+	#                   #
+	#####################
 
-my $count=0;#<integer>
-while (my $line = <$MODEL>) {  #<string>#leitura treino
+	my $count=0;#<integer>
+	while (my $line = <$MODEL>) {  #<string>#leitura treino
 
-	my $cat;#<string>
-	my $prob;#<double>
-	my $feat;#<string>
-	my $freq;#<double>
-  
-	$count++; 
-	chomp $line;
-	#$line = trim($line);
+		my $cat;#<string>
+		my $prob;#<double>
+		my $feat;#<string>
+		my $freq;#<double>
+	
+		$count++; 
+		chomp $line;
+		#$line = trim($line);
 
-	($N) = ($line =~ /<number\_of\_docs>([0-9]*)</) if ($count==1);
+		($Tagger::N_init) = ($line =~ /<number\_of\_docs>([0-9]*)</) if ($count==1);
 
-	if ($line =~ /<cat>/) { 
-		(my $tmp) = $line =~ /<cat>([^<]*)</ ;#<string>
-		#print STDERR "ProbCat: ---> #$tmp# \n";
-		($cat, $prob) = split (" ", $tmp);
-		$ProbCat{$cat}=$prob ;
-		#print STDERR "CAT: ---> #$cat# \n";
+		if ($line =~ /<cat>/) { 
+			(my $tmp) = $line =~ /<cat>([^<]*)</ ;#<string>
+			#print STDERR "ProbCat: ---> #$tmp# \n";
+			($cat, $prob) = split (" ", $tmp);
+			$Tagger::ProbCat_init{$cat}=$prob ;
+			#print STDERR "CAT: ---> #$cat# \n";
+		}
+
+		($feat, $cat, $prob, $freq) = split(qr/ /, $line) if ($line !~ /<cat>/);
+
+		$Tagger::PriorProb_init{$cat}{$feat} = $prob if ($cat);
+		$Tagger::featFreq_init{$feat} = $freq;
+		# print STDERR "CAT: ---> #$cat# ::: FEAT: #$feat# --  $Tagger::featFreq{$feat}\n";
+		#printf STDERR "<%7d>\r",$cont if ($cont++ % 100 == 0);
+	
 	}
-
-	($feat, $cat, $prob, $freq) = split(qr/ /, $line) if ($line !~ /<cat>/);
-
-	$PriorProb{$cat}{$feat} = $prob if ($cat);
-	$featFreq{$feat} = $freq;
-	# print STDERR "CAT: ---> #$cat# ::: FEAT: #$feat# --  $featFreq{$feat}\n";
-	#printf STDERR "<%7d>\r",$cont if ($cont++ % 100 == 0);
-   
+	close $MODEL;
 }
-close $MODEL;
 
 sub tagger {
+
+	$Tagger::N = $Tagger::N_init;#<double>
+	%Tagger::PriorProb = dclone(\$Tagger::PriorProb_init);#<hash><hash><double>
+	%Tagger::ProbCat = dclone(\$Tagger::ProbCat_init);#<hash><double>
+	%Tagger::featFreq = dclone(\$Tagger::featFreq_init);#<hash><double>
 
 	my @saida=();#<list><string>
 	my ($text) = @_;#<ref><list><string>
@@ -113,7 +118,7 @@ sub tagger {
  
 		my @entry = split (" ", $line);#<array><string> 
   
-		if ($entry[2] !~ /^$Border$/) {
+		if ($entry[2] !~ /^$Tagger::Border$/) {
 			$Token[$pos] = $entry[0];
 			if ($entry[0] && !$entry[1]) {
  			    $entry[1] = $entry[0];
@@ -140,7 +145,7 @@ sub tagger {
 
 				$i++;
 				#print STDERR "LEMA:: #$Token[$pos]# #$Lema{$pos}{$Tag[$pos]}# #$Tag[$pos]#\n"; 
-				#print STDERR "----$Tag[$pos]# --#$ProbCat{$Tag[$pos]}#\n";
+				#print STDERR "----$Tag[$pos]# --#$Tagger::ProbCat{$Tag[$pos]}#\n";
 			}
     
 			####REGRAS MORFOLOGICAS
@@ -195,11 +200,7 @@ sub tagger {
 				#print STDERR "TOKENS::: #$pos# -- #$Token[$pos]#\n";
 				if ($noamb[$pos]) {
 					###RESULTADO para nao ambiguas nem desconhecidas: 
-					if($pipe){#<ignore-line>
-						print "$Token[$pos] $Lema[$pos] ".$Tag{$pos}{$Tag[$pos]}."\n";#<ignore-line>
-					}else{#<ignore-line>
-						push (@saida, "$Token[$pos] $Lema[$pos] ".$Tag{$pos}{$Tag[$pos]});
-					}#<ignore-line>
+					push (@saida, "$Token[$pos] $Lema[$pos] ".$Tag{$pos}{$Tag[$pos]});
 				}else {
 					if (!$unk[$pos]) { #se a forma e ambigua mas conhecida, utilizamos a lista de tags atribuida a forma
 						foreach  my $cat (keys %{$Tag{$pos}}) {
@@ -207,7 +208,7 @@ sub tagger {
 							push (@Cat, $cat);
 						}
 					}else { #se a forma e desconhecida, utilizamos uma lista de tags de classes abertas
-						foreach  my $cat (@cat_open) {
+						foreach  my $cat (@Tagger::cat_open) {
 							#print STDERR "UNK----#$cat# \n";
 							push (@Cat, $cat);
 						}  
@@ -217,7 +218,7 @@ sub tagger {
 					my $amb;#<string>
 		
 					if ($pos==0) {
-						for (my $j=1;$j<=$w;$j++) {#<integer>
+						for (my $j=1;$j<=$Tagger::w;$j++) {#<integer>
 							if ($noamb[$j]) {
 								$amb = "noamb";
 							}else {
@@ -226,20 +227,20 @@ sub tagger {
 							foreach my $feat (keys %{$Tag{$j}}) {
 								if (!$feat) {next;}
 								$k++;
-								$feat = $amb . "_" . $k . "_" . $w . "_R_" . $feat;
+								$feat = $amb . "_" . $k . "_" . $Tagger::w . "_R_" . $feat;
 								my $new_token = lc $Token[$pos];#<string>
 								my $featL = $feat . "_" .  $new_token;#<string>
 								#  print STDERR "FEATS:: ----#$feat#  #$Tag{$j}{$feat}# #$Token[$pos]# #$Token[$j]# \n";
 								push (@Feat, $feat);
 								push (@Feat, $featL);
 							}   
-							my $feat = "noamb" . "_" . "1" . "_" . $w . "_L_" . "BEGIN";#<string>
+							my $feat = "noamb" . "_" . "1" . "_" . $Tagger::w . "_L_" . "BEGIN";#<string>
 							push (@Feat, $feat);
 							$k=0;
 							$amb="";
 						}
 					}elsif ($pos==$#Tag) {
-						my $end=$#Tag-$w;#<integer>
+						my $end=$#Tag-$Tagger::w;#<integer>
 						for (my $j=$#Tag-1;$j>=$end;$j--) {#<integer>
 						if ($noamb[$j]) {
 							$amb = "noamb";
@@ -251,21 +252,21 @@ sub tagger {
 								next;
 							}
 							$k++;
-							$feat =  $amb . "_" . $k . "_" . $w . "_L_" . $feat;
+							$feat =  $amb . "_" . $k . "_" . $Tagger::w . "_L_" . $feat;
 							my $new_token = lc $Token[$pos];#<string>
 							my $featL = $feat . "_" .  $new_token;#<string>
 							#   print STDERR "OKKK----#$Tag{$pos}# \n";
 							push (@Feat, $feat);
 							push (@Feat, $featL);
 						}
-						my $feat = "noamb" . "_" . "1" . "_" . $w . "_R_" . "END";#<string>
+						my $feat = "noamb" . "_" . "1" . "_" . $Tagger::w . "_R_" . "END";#<string>
 						push (@Feat, $feat);  
 						$k=0;
 						$amb="";
 						}  
 					} 
 					else {
-						my $end=$pos+$w;#<integer>
+						my $end=$pos+$Tagger::w;#<integer>
 						#print STDERR "i=#$i#::: #$Cat# -- #$#Tag#\n";
 						for (my $j=$pos+1;$j<=$end;$j++) {#<integer>
 							if ($noamb[$j]) {
@@ -278,7 +279,7 @@ sub tagger {
 									next;
 								}
 								$k++;
-								$feat = $amb . "_" . $k . "_" . $w . "_R_" . $feat;
+								$feat = $amb . "_" . $k . "_" . $Tagger::w . "_R_" . $feat;
 								my $new_token = lc $Token[$pos];#<string>
 								my $featL = $feat . "_" .  $new_token;#<string>
 								# print STDERR "OKKK----#$Token[$pos]# \n";
@@ -289,7 +290,7 @@ sub tagger {
 							$k=0; 
 							$amb="";
 						}  
-						$end=$pos-$w; 
+						$end=$pos-$Tagger::w; 
 						for (my $j=$pos-1;$j>=$end;$j--) {#<integer>
 							if ($noamb[$j]) {
 								$amb = "noamb";
@@ -301,7 +302,7 @@ sub tagger {
 									next;
 								}
 								$k++;
-								$feat = $amb . "_" . $k . "_" . $w . "_L_" . $feat;
+								$feat = $amb . "_" . $k . "_" . $Tagger::w . "_L_" . $feat;
 								my $new_token = lc $Token[$pos];#<string>
 								my $featL = $feat . "_" .  $new_token;#<string>
 								#print STDERR "----#$feat# \n";
@@ -323,11 +324,7 @@ sub tagger {
 						$Tag[$pos] = $Tag{$pos}{$tag} ;
 					}
 					###RESULTADO:
-					if($pipe){#<ignore-line>
-						print "$Token[$pos] ".$Lema{$pos}{$Tag[$pos]}." $Tag[$pos]\n";#<ignore-line>
-					}else{#<ignore-line>
-						push (@saida, "$Token[$pos] ".$Lema{$pos}{$Tag[$pos]}." $Tag[$pos]"); 
-					}#<ignore-line>
+					push (@saida, "$Token[$pos] ".$Lema{$pos}{$Tag[$pos]}." $Tag[$pos]"); 
 
 					##eliminar tags nao selecionados do token resultante para proximos processos
 					foreach my $t (keys %{$Tag{$pos}}) {
@@ -340,12 +337,8 @@ sub tagger {
 				}
 			}
 			###RESULTADO:
-			if($pipe){#<ignore-line>
-				print "$last_entry\n\n";#<ignore-line>
-			}else{#<ignore-line>
-				push (@saida, "$last_entry");
-				push (@saida, "");
-			}#<ignore-line>  
+			push (@saida, "$last_entry");
+			push (@saida, "");
     
 			for ($pos=0;$pos<=$#Tag;$pos++) {
 				delete $Tag{$pos}; 
@@ -360,11 +353,14 @@ sub tagger {
 		}
 	} 
 	#print STDERR "number of sentences: #$s#\n";
+	print join("\n", @saida);
 	return \@saida;
 }
 
 #<ignore-block>
-if($pipe){
+$Sentences::pipe = !defined (caller);
+init();
+if($Sentences::pipe){
 	my @lines=<STDIN>;
 	tagger(\@lines);
 }
@@ -385,7 +381,7 @@ sub classif {
 	#########################################
   
 	my %found=();#<hash><boolean>
-	my $smooth = 1/$N;#<double>
+	my $smooth = 1/$Tagger::N;#<double>
 	#my $cat_restr;
 	#my $n;
 	my $feat;#<string>
@@ -400,39 +396,39 @@ sub classif {
 		#}
 	#}
 
-	#my $Normalizer=0;
+	#my $Tagger::Normalizer=0;
 	#my %count;#<hash><integer>
 	foreach my $cat (@{$C}) {
 		if (!$cat) {
 			next;
 		}
 		#$count{$cat}++;
-		$PostProb{$cat}  = $ProbCat{$cat};
-		#print STDERR "----#$cat_restr# #$ProbCat{$cat}#\n";
+		$PostProb{$cat}  = $Tagger::ProbCat{$cat};
+		#print STDERR "----#$cat_restr# #$Tagger::ProbCat{$cat}#\n";
 		$found{$cat}=0;
 		foreach my $feat_restr (@{$F}) {
 			($feat) = $feat_restr =~ /^[a-z]+\_[0-9]+\_[0-9]\_([RL]\_[^ ]+)/;
 			#print STDERR "FEAT: #$cat# - #$feat#\n"; 
-			if (!$featFreq{$feat}) { 
+			if (!$Tagger::featFreq{$feat}) { 
 			  #print STDERR "NOFREQ----#$cat# - #$feat#\n" ;
 			   next;
 			}    
-			$PriorProb{$cat}{$feat}  = $smooth if ($PriorProb{$cat}{$feat}  ==0 ) ; 
+			$Tagger::PriorProb{$cat}{$feat}  = $smooth if ($Tagger::PriorProb{$cat}{$feat}  ==0 ) ; 
 			if (rules_neg ($cat, $feat)) {
-			  $PriorProb{$cat}{$feat}  = 0;  
-			  #print STDERR "RULES NEG:: ----#$cat# - #$feat# PriorProb=#$PriorProb{$cat}{$feat}# \n";
+			  $Tagger::PriorProb{$cat}{$feat}  = 0;  
+			  #print STDERR "RULES NEG:: ----#$cat# - #$feat# PriorProb=#$Tagger::PriorProb{$cat}{$feat}# \n";
 			}
 			elsif (!$unk->[$pos] && rules_pos ($cat, $feat)) {
-			  $PriorProb{$cat}{$feat}  = 1;  
-			  #print STDERR "RULES POS:: ----#$cat# - #$feat# PriorProb=#$PriorProb{$cat}{$feat}# \n";
+			  $Tagger::PriorProb{$cat}{$feat}  = 1;  
+			  #print STDERR "RULES POS:: ----#$cat# - #$feat# PriorProb=#$Tagger::PriorProb{$cat}{$feat}# \n";
 			}
 			$found{$cat}=1; 
-			$PostProb{$cat} = $PostProb{$cat} * $PriorProb{$cat}{$feat};
-			#print STDERR "----#$cat# - #$feat# PriorProb#$PriorProb{$cat}{$feat}# PostProb#$PostProb{$cat}#  -- featFreq:#$featFreq{$feat}# N=#$N#  \n";
+			$PostProb{$cat} = $PostProb{$cat} * $Tagger::PriorProb{$cat}{$feat};
+			#print STDERR "----#$cat# - #$feat# PriorProb#$Tagger::PriorProb{$cat}{$feat}# PostProb#$PostProb{$cat}#  -- featFreq:#$Tagger::featFreq{$feat}# N=#$Tagger::N#  \n";
 		}
-		$PostProb{$cat} =  $PostProb{$cat} * $ProbCat{$cat} ;
+		$PostProb{$cat} =  $PostProb{$cat} * $Tagger::ProbCat{$cat} ;
 		$PostProb{$cat} = 0 if (!$found{$cat});    
-		#$Normalizer +=   $PostProb{$cat} 
+		#$Tagger::Normalizer +=   $PostProb{$cat} 
 		#print STDERR "----#$cat# $PostProb{$cat} \n";
 	}
 	my $First=0;#<integer>
