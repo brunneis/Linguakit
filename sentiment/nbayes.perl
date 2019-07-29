@@ -12,34 +12,35 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
+sub init() {
+	use Storable qw(dclone);
 
-# Absolute path 
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
+	# Absolute path 
+	use File::Basename;#<ignore-line>
+	$NBayes::abs_path = ".";#<string>
+	$NBayes::abs_path = dirname(__FILE__);#<ignore-line>
 
-my %Lex=();#<hash><string>
-my %Lex_contr=();#<hash><string>
-my %ProbCat=();#<hash><string>
-my %PriorProb=();#<hash><hash><double>
-my %featFreq=();#<hash><integer>
-my %list=();#<hash><string>
-my $N=1;#<integer>
-my $total=0;#<integer>
-my $peso_total=0;#<double>
-my $result=0;#<double>
+	%NBayes::Lex_init=();#<hash><string>
+	%NBayes::Lex_contr_init=();#<hash><string>
+	%NBayes::ProbCat_init=();#<hash><string>
+	%NBayes::PriorProb_init=();#<hash><hash><double>
+	%NBayes::featFreq_init=();#<hash><integer>
+	%NBayes::list_init=();#<hash><string>
+	$NBayes::N_init=1;#<integer>
+	$NBayes::total_init=0;#<integer>
+	$NBayes::peso_total_init=0;#<double>
+	$NBayes::result_init=0;#<double>
+}
 
 sub load{
 	my ($lang) = @_;#<string>
 
 	my $TRAIN;#<file>
-	open ($TRAIN, $abs_path."/$lang/train_$lang") or die "O ficheiro não pode ser aberto: $! $lang/train_$lang\n";
+	open ($TRAIN, $NBayes::abs_path."/$lang/train_$lang") or die "O ficheiro não pode ser aberto: $! $lang/train_$lang\n";
 	binmode $TRAIN,  ':utf8';#<ignore-line>
 
 	my $LEX;#<file>
-	open ($LEX, $abs_path."/$lang/lex_$lang") or die "O ficheiro não pode ser aberto: $! $lang/lex_$lang\n";
+	open ($LEX, $NBayes::abs_path."/$lang/lex_$lang") or die "O ficheiro não pode ser aberto: $! $lang/lex_$lang\n";
 	binmode $LEX,  ':utf8';#<ignore-line>
 
 
@@ -54,17 +55,17 @@ sub load{
 		my ($word, $cat) = split ('\t', $line);#<string>
 		$word = trim ($word);
 		$cat = trim ($cat);
-		$Lex{$word} .= $cat . "|";
-		$PriorProb{$cat}={} if (!defined $PriorProb{$cat});
-		$PriorProb{$cat}{$word} = 0.1;
-		#print STDERR "#$word# --  $Lex{$word}\n" ;
+		$NBayes::Lex_init{$word} .= $cat . "|";
+		$NBayes::PriorProb_init{$cat}={} if (!defined $NBayes::PriorProb_init{$cat});
+		$NBayes::PriorProb_init{$cat}{$word} = 0.1;
+		#print STDERR "#$word# --  $NBayes::Lex_init{$word}\n" ;
 	}
 
-	foreach my $l (keys %Lex) {
+	foreach my $l (keys %NBayes::Lex_init) {
 		my $positive=0;#<integer>
 		my $negative=0;#<integer>
 		my $none=0;#<integer>
-		my @pols = split ('\|', $Lex{$l});#<array><string>
+		my @pols = split ('\|', $NBayes::Lex_init{$l});#<array><string>
 
 		foreach my $p (@pols) {
 			#print STDERR "------------------ #$l# --- P=#$p#\n";
@@ -74,15 +75,15 @@ sub load{
 		}
 
 		if ($positive > $negative) {
-			$Lex{$l} = "POSITIVE";
-			$Lex_contr{$l} = "NEGATIVE"; 
+			$NBayes::Lex_init{$l} = "POSITIVE";
+			$NBayes::Lex_contr_init{$l} = "NEGATIVE"; 
 		}elsif ($negative > $positive) {
-			$Lex{$l} = "NEGATIVE";
-			$Lex_contr{$l} = "POSITIVE";
+			$NBayes::Lex_init{$l} = "NEGATIVE";
+			$NBayes::Lex_contr_init{$l} = "POSITIVE";
 		}else {
-			delete $Lex{$l};
+			delete $NBayes::Lex_init{$l};
 		}
-		#print STDERR "#$l# --  $Lex{$l}\n" ;
+		#print STDERR "#$l# --  $NBayes::Lex_init{$l}\n" ;
 	}
 
 
@@ -91,7 +92,7 @@ sub load{
 	#    READING TRAIN  #
 	#                   #
 	#####################
-	($N) = (<$TRAIN> =~ /<number\_of\_docs>([0-9]*)</);
+	($NBayes::N_init) = (<$TRAIN> =~ /<number\_of\_docs>([0-9]*)</);
 	while (my $line = <$TRAIN>) { #<string>#leitura treino
 		chomp $line;
 
@@ -99,28 +100,38 @@ sub load{
 			my ($tmp) = $line =~ /<cat>([^<]*)</;#<string>
 			#print STDERR "ProbCat: ---> #$tmp# \n";
 			my ($cat, $prob) = split (" ", $tmp);#<string>
-			$ProbCat{$cat}=$prob ;
+			$NBayes::ProbCat_init{$cat}=$prob ;
 			#print STDERR "CAT: ---> #$cat# \n";
 		}elsif ($line =~ /<list>/) { 
 			my ($tmp) = $line =~ /<list>([^<]*)</;#<string>
 			my ($var, $list) = split (" ", $tmp);#<string>
-			$list{$var} = $list;
-			#print STDERR "#$var# -- #$list#\n";
+			$NBayes::list_init{$var} = $list;
+			#print STDERR "#$var# -- #$NBayes::list_init#\n";
 		}else{
 			my ($feat, $cat, $prob, $freq) = split(qr/ /, $line);#<string>
 			if($cat){
-				$PriorProb{$cat} = {} if (!defined $PriorProb{$cat});
-				$PriorProb{$cat}{$feat} = $prob if (!$PriorProb{$cat}{$feat});
+				$NBayes::PriorProb_init{$cat} = {} if (!defined $NBayes::PriorProb_init{$cat});
+				$NBayes::PriorProb_init{$cat}{$feat} = $prob if (!$NBayes::PriorProb_init{$cat}{$feat});
 			}
-			$featFreq{$feat} = $freq;
+			$NBayes::featFreq_init{$feat} = $freq;
 			#print STDERR "CAT: ---> #$cat# -- #$prob# \n" ;
 		}
 	}
 
 }
 
-
 sub nbayes{
+
+	%NBayes::Lex = %{dclone(\%NBayes::Lex_init)};#<hash><string>
+	%NBayes::Lex_contr = %{dclone(\%NBayes::Lex_contr_init)};#<hash><string>
+	%NBayes::ProbCat = %{dclone(\%NBayes::ProbCat_init)};#<hash><string>
+	%NBayes::PriorProb = %{dclone(\%NBayes::PriorProb_init)};#<hash><hash><double>
+	%NBayes::featFreq = %{dclone(\%NBayes::featFreq_init)};#<hash><integer>
+	%NBayes::list = %{dclone(\%NBayes::list_init)};#<hash><string>
+	$NBayes::N = $NBayes::N_init;#<integer>
+	$NBayes::total = $NBayes::total_init;#<integer>
+	$NBayes::peso_total = $NBayes::peso_total_init;#<double>
+	$NBayes::result = $NBayes::result_init;#<double>
 
 	my ($text) = @_;#<ref><list><string>
 
@@ -154,43 +165,43 @@ sub nbayes{
 
 		if ($tag =~ /^([FI])/) {
 			$previous="";
-		} elsif ($tag =~ /^(V|N|AQ|R|JJ)/ && $lemma !~ /^($list{'light_words'})$/) {   
+		} elsif ($tag =~ /^(V|N|AQ|R|JJ)/ && $lemma !~ /^($NBayes::list{'light_words'})$/) {   
 			my $lemma_orig;#<string>
-			if ($Lex{$lemma}) { ##Contar os lemas da frase de entrada que estao no léxico.
+			if ($NBayes::Lex{$lemma}) { ##Contar os lemas da frase de entrada que estao no léxico.
 				$LEX++;
 				$lemma_orig=$lemma;
 				#print STDERR "LEX:#$lemma#\n";
 			}
-			if ($Lex{$lemma} && $tag =~ /^(AQ|JJ)/ && $previous =~ /^($list{'quant_adj'})$/ ) { ##muy bonito
+			if ($NBayes::Lex{$lemma} && $tag =~ /^(AQ|JJ)/ && $previous =~ /^($NBayes::list{'quant_adj'})$/ ) { ##muy bonito
 				$lemma = $previous . "_" . $lemma;
 				#print STDERR "#$lemma# #$previous# #$previous2# \n";
-				if ($previous2 =~ /^($list{'neg_noun'})$/ && $lemma =~ /^$list{'quant_adj'}\_/) { ##no muy bonito
+				if ($previous2 =~ /^($NBayes::list{'neg_noun'})$/ && $lemma =~ /^$NBayes::list{'quant_adj'}\_/) { ##no muy bonito
 					$lemma = $previous2 . "_" . $lemma;
-					$PriorProb{$Lex_contr{$lemma_orig}}{$lemma} =  $PriorProb{$Lex{$lemma_orig}}{$lemma_orig}  if ($Lex{$lemma_orig});
-					$PriorProb{$Lex{$lemma_orig}}{$lemma} =  0 if ($Lex{$lemma_orig});
+					$NBayes::PriorProb{$NBayes::Lex_contr{$lemma_orig}}{$lemma} =  $NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma_orig}  if ($NBayes::Lex{$lemma_orig});
+					$NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma} =  0 if ($NBayes::Lex{$lemma_orig});
 					push (@A, $lemma);
 					$Compound{$lemma}=1;
-					#print STDERR "LEM:#$lemma# - #$lema_orig# -- #$Lex_contr{$lemma_orig}#\n";
+					#print STDERR "LEM:#$lemma# - #$lema_orig# -- #$NBayes::Lex_contr{$lemma_orig}#\n";
 				} else { 
-					$PriorProb{$Lex{$lemma_orig}}{$lemma} =  $PriorProb{$Lex{$lemma_orig}}{$lemma_orig}  if ($Lex{$lemma_orig});
-					# $PriorProb{$Lex{$lemma_orig}}{$lemma} =  0 if ($Lex{$lemma_orig});
+					$NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma} =  $NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma_orig}  if ($NBayes::Lex{$lemma_orig});
+					# $NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma} =  0 if ($NBayes::Lex{$lemma_orig});
 					$Compound{$lemma}=1;
 					push (@A, $lemma);
 				}
-			} elsif ($Lex{$lemma} && $tag =~ /(^N|^AQ|^JJ)/ && $previous =~ /^($list{'neg_noun'})$/) { ##no bonito
+			} elsif ($NBayes::Lex{$lemma} && $tag =~ /(^N|^AQ|^JJ)/ && $previous =~ /^($NBayes::list{'neg_noun'})$/) { ##no bonito
 				#print STDERR "LEM:#$lemma# - #$lemma_orig# #Previous: #$previous#\n";
 				$lemma = $previous . "_" . $lemma;
-				$PriorProb{$Lex_contr{$lemma_orig}}{$lemma} =  $PriorProb{$Lex{$lemma_orig}}{$lemma_orig}  if ($Lex{$lemma_orig});
-				$PriorProb{$Lex{$lemma_orig}}{$lemma} =  0 if ($Lex{$lemma_orig});
+				$NBayes::PriorProb{$NBayes::Lex_contr{$lemma_orig}}{$lemma} =  $NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma_orig}  if ($NBayes::Lex{$lemma_orig});
+				$NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma} =  0 if ($NBayes::Lex{$lemma_orig});
 				$Compound{$lemma}=1;
 				push (@A, $lemma);
-				#print STDERR "LEM:#$lemma# - #$lemma_orig# #Previous: #$previous# -- #$Lex_contr{$lemma_orig}# --- #$PriorProb{$Lex_contr{$lemma_orig}}{$lemma}# -- #$PriorProb{$Lex{$lemma_orig}}{$lemma}#\n";
+				#print STDERR "LEM:#$lemma# - #$lemma_orig# #Previous: #$previous# -- #$NBayes::Lex_contr{$lemma_orig}# --- #$NBayes::PriorProb{$NBayes::Lex_contr{$lemma_orig}}{$lemma}# -- #$NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma}#\n";
 				#print STDERR "LEMMA COM NEG: #$lemma#\n";
-			} elsif ($Lex{$lemma} && $tag =~ /^V/ && $previous =~ /^($list{'neg_verb'})$/) { #no me gusta
+			} elsif ($NBayes::Lex{$lemma} && $tag =~ /^V/ && $previous =~ /^($NBayes::list{'neg_verb'})$/) { #no me gusta
 				$lemma = $previous . "_" . $lemma;
 				#print STDERR "VERB COM NEG: #$lemma#\n";
-				$PriorProb{$Lex_contr{$lemma_orig}}{$lemma} =  $PriorProb{$Lex{$lemma_orig}}{$lemma_orig}  if ($Lex{$lemma_orig});
-				$PriorProb{$Lex{$lemma_orig}}{$lemma} =  0 if ($Lex{$lemma_orig});
+				$NBayes::PriorProb{$NBayes::Lex_contr{$lemma_orig}}{$lemma} =  $NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma_orig}  if ($NBayes::Lex{$lemma_orig});
+				$NBayes::PriorProb{$NBayes::Lex{$lemma_orig}}{$lemma} =  0 if ($NBayes::Lex{$lemma_orig});
 				$Compound{$lemma}=1;
 				push (@A, $lemma);
 			} else {
@@ -211,46 +222,49 @@ sub nbayes{
  
 
 	if ($POS_EMOT > $NEG_EMOT){ #if there is more positive emoticons: positive
-		$total++;
-		$peso_total += 1;
+		$NBayes::total++;
+		$NBayes::peso_total += 1;
+		print "$lines\tPOSITIVE\t1";
 		return "$lines\tPOSITIVE\t1";
 	} elsif ($POS_EMOT < $NEG_EMOT){#if there is more negative emoticons: negative
-		$total++;
-		$peso_total -= 1;
+		$NBayes::total++;
+		$NBayes::peso_total -= 1;
+		print "$lines\tNEGATIVE\t1";
 		return "$lines\tNEGATIVE\t1";
 	} elsif (!$LEX) {
-	        $total++;
+	        $NBayes::total++;
+		print "$lines\t$default_value\t1"; #if there is no lemma from the polartity lexicon: NONE.
 		return "$lines\t$default_value\t1"; #if there is no lemma from the polartity lexicon: NONE.
 	}
 
-	my $smooth = 1/$N;#<double>
+	my $smooth = 1/$NBayes::N;#<double>
 	my $Normalizer = 0;#<double>
 	my %PostProb=();#<hash><double>
 	my %found=();#<hash><boolean>
 	my $found;#<boolean>
 
-	foreach my $cat (keys %PriorProb) {
+	foreach my $cat (keys %NBayes::PriorProb) {
 		if (!$cat) { next;}
-		$PostProb{$cat}  = $ProbCat{$cat};
-		#print STDERR "ProbCat:#$cat# - #$ProbCat{$cat}#\n";
+		$PostProb{$cat}  = $NBayes::ProbCat{$cat};
+		#print STDERR "ProbCat:#$cat# - #$NBayes::ProbCat{$cat}#\n";
 		$found{$cat}=0;
 		foreach my $word (@A) {
-			#if (!$featFreq{$word} ||  $PriorProb{$cat}{$word} <= $th) {next} ;
-			if (!$featFreq{$word} &&  !$Compound{$word} && !$Lex{$word}) { next;};
-			#print STDERR " priorprob-$word:#$PriorProb{$cat}{$word}#\n";
-			$PriorProb{$cat}{$word}  = $smooth if ($PriorProb{$cat}{$word}  ==0) ;
+			#if (!$NBayes::featFreq{$word} ||  $NBayes::PriorProb{$cat}{$word} <= $th) {next} ;
+			if (!$NBayes::featFreq{$word} &&  !$Compound{$word} && !$NBayes::Lex{$word}) { next;};
+			#print STDERR " priorprob-$word:#$NBayes::PriorProb{$cat}{$word}#\n";
+			$NBayes::PriorProb{$cat}{$word}  = $smooth if ($NBayes::PriorProb{$cat}{$word}  ==0) ;
 			$found{$cat}=1; 
-			$PostProb{$cat} = $PostProb{$cat} * $PriorProb{$cat}{$word};
-			#print STDERR "----#$cat# - #$word# PriorProb#$PriorProb{$cat}{$word}# PostProb#$PostProb{$cat}#\n";
+			$PostProb{$cat} = $PostProb{$cat} * $NBayes::PriorProb{$cat}{$word};
+			#print STDERR "----#$cat# - #$word# PriorProb#$NBayes::PriorProb{$cat}{$word}# PostProb#$PostProb{$cat}#\n";
 		}
  
 		if ($found{$cat}){
-			$PostProb{$cat} =  $PostProb{$cat} * $ProbCat{$cat};
+			$PostProb{$cat} =  $PostProb{$cat} * $NBayes::ProbCat{$cat};
 		} else{
 			$PostProb{$cat} = 0;
 		}
 		$Normalizer +=   $PostProb{$cat};
-		#print STDERR "PROB: #$cat# -  PostProb#$PostProb{$cat}#  ProbCat#$ProbCat{$cat}#\n";
+		#print STDERR "PROB: #$cat# -  PostProb#$PostProb{$cat}#  ProbCat#$NBayes::ProbCat{$cat}#\n";
 	}
 	$found=0;
 	foreach my $c (keys %PostProb) {
@@ -260,19 +274,21 @@ sub nbayes{
 	}
 
 	if (!$found) {
-	        $total++;
+	        $NBayes::total++;
+		print "$lines\t$default_value\t1"; 
 		return "$lines\t$default_value\t1"; 
 	} else {
 		foreach my $c (sort {$PostProb{$b} <=> $PostProb{$a} } keys %PostProb ) {
-		        #$total++;
+		        #$NBayes::total++;
 			if ($c eq "POSITIVE") {
-			    $peso_total += $PostProb{$c};
-			    $total++;
+			    $NBayes::peso_total += $PostProb{$c};
+			    $NBayes::total++;
 			}
 			elsif ($c eq "NEGATIVE") {
-			    $peso_total -= $PostProb{$c};
-			    $total++;
+			    $NBayes::peso_total -= $PostProb{$c};
+			    $NBayes::total++;
 			}
+			print "$lines\t$c\t$PostProb{$c}";
 			return "$lines\t$c\t$PostProb{$c}";
 		}
 	}
@@ -280,34 +296,36 @@ sub nbayes{
 }
 
 sub end {
-    #print STDERR "total=#$total# -- peso=#$peso_total#\n";
+    #print STDERR "total=#$NBayes::total# -- peso=#$NBayes::peso_total#\n";
     my $c=0;#<doubled>
-    if ($total == 1 && $peso_total == 0) {
+    if ($NBayes::total == 1 && $NBayes::peso_total == 0) {
 	   return "TOTAL\tNONE\t1\n"; 
     }
     else {
-        $result = $peso_total / $total;
+        $NBayes::result = $NBayes::peso_total / $NBayes::total;
 	
-	if ($peso_total >= 0) {
+	if ($NBayes::peso_total >= 0) {
 	   $c = "POSITIVE"
 	}
-	elsif ($peso_total <= 0) {
+	elsif ($NBayes::peso_total <= 0) {
 	   $c = "NEGATIVE"
 	}
 	else {
 	   $c = "NONE"
 	}
-	$result = abs ($result);
-	return "TOTAL\t$c\t$result\n";
+	$NBayes::result = abs ($NBayes::result);
+	return "TOTAL\t$c\t$NBayes::result\n";
     }
 }
 
 #<ignore-block>
-if($pipe){
+$Sentences::pipe = !defined (caller);
+init();
+if($Sentences::pipe){
 	my $lang = shift(@ARGV);
 	load($lang);
 	my @lines=<STDIN>;
-	print nbayes(\@lines);
+	nbayes(\@lines);
 }
 #<ignore-block>
 
@@ -317,4 +335,3 @@ sub trim {    #remove all leading and trailing spaces
 	$str =~ s/^\s*(.*\S)\s*$/$1/;
 	return $str;
 }
-
