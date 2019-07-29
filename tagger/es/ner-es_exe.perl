@@ -13,57 +13,56 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
+sub init() {
+	# Absolute path 
+	use File::Basename;#<ignore-line>
+	my $abs_path = ".";#<string>
+	$abs_path = dirname(__FILE__);#<ignore-line>
+	unshift(@INC, $abs_path);#<ignore-line>
+	do "store_lex.perl";
 
-# Absolute path 
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
-unshift(@INC, $abs_path);#<ignore-line>
-do "store_lex.perl";
+	##ficheiros de recursos
+	$Ner::Entry;#<ref><hash><string>
+	$Ner::Lex;#<ref><hash><integer>
+	$Ner::StopWords;#<ref><hash><string>
+	$Ner::Noamb;#<ref><hash><boolean>
+	($Ner::Entry,$Ner::Lex,$Ner::StopWords,$Ner::Noamb) = Store::read();
 
-##ficheiros de recursos
-my $Entry;#<ref><hash><string>
-my $Lex;#<ref><hash><integer>
-my $StopWords;#<ref><hash><string>
-my $Noamb;#<ref><hash><boolean>
-($Entry,$Lex,$StopWords,$Noamb) = Store::read();
-
-##lexico de formas ambiguas
-my $AMB;#<file>
-open ($AMB, $abs_path."/lexicon/ambig.txt") or die "O ficheiro de palavras ambiguas não pode ser aberto: $!\n";
-binmode $AMB,  ':utf8';#<ignore-line>
+	##lexico de formas ambiguas
+	my $AMB;#<file>
+	open ($AMB, $abs_path."/lexicon/ambig.txt") or die "O ficheiro de palavras ambiguas não pode ser aberto: $!\n";
+	binmode $AMB,  ':utf8';#<ignore-line>
 
 
-##variaveis globais
-##para sentences e tokens:
-my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ]";#<string>
-my $LowerCase = "[a-záéíóúàèìòùâêîôûñçüãẽĩõũ]";#<string>
-my $Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…\-\+]/;#<string>
-my $Punct_urls = qr/[\:\/\~]/;#<string>
-my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ-záéíóúàèìòùâêîôûñçüüãẽĩõũ]";#<string>
+	##variaveis globais
+	##para sentences e tokens:
+	$Ner::UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ]";#<string>
+	$Ner::LowerCase = "[a-záéíóúàèìòùâêîôûñçüãẽĩõũ]";#<string>
+	$Ner::Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…\-\+]/;#<string>
+	$Ner::Punct_urls = qr/[\:\/\~]/;#<string>
+	my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ-záéíóúàèìòùâêîôûñçüüãẽĩõũ]";#<string>
 
-##########CARGANDO RECURSOS COMUNS
-##cargando o lexico freeling e mais variaveis globais
-my %Ambig=();#<hash><boolean>
-##carregando palavras ambiguas
-while (my $t = <$AMB>) {#<string>
-	$t = Trim ($t);
-	$Ambig{$t}=1;
+	##########CARGANDO RECURSOS COMUNS
+	##cargando o lexico freeling e mais variaveis globais
+	%Ner::Ambig=();#<hash><boolean>
+	##carregando palavras ambiguas
+	while (my $t = <$AMB>) {#<string>
+		$t = Trim ($t);
+		$Ner::Ambig{$t}=1;
+	}
+	close $AMB;
+
+
+	######################info dependente da língua!!!####################################################################################
+	$Ner::Prep = "(de|del|von)";#<string>   ##preposiçoes que fazem parte dum NP composto
+	$Ner::Art = "(el|la|los|las)";#<string>  ##artigos que fazem parte dum NP composto
+	$Ner::currency = "(euro|euros|dólar|dólares|peseta|pesetas|yen|yenes|escudo|escudos|franco|francos|real|reales|€)";#<string> 
+	$Ner::measure = "(kg|kilogramo|quilogramo|gramo|g|centímetro|cm|hora|segundo|minuto|tonelada|tn|metro|m|km|kilómetro|quilómetro|%)";#<string> 
+	$Ner::quant = "(ciento|cientos|miles|millón|millones|billón|billones|trillón|trillones)";#<string> 
+	$Ner::cifra = "(dos|tres|catro|cinco|seis|siete|ocho|nueve|diez|cien|mil)";#<string>   ##hai que criar as cifras básicas: once, doce... veintidós, treinta y uno...
+	$Ner::meses =  "(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)";#<string> 
+	######################info dependente da língua!!!####################################################################################
 }
-close $AMB;
-
-
-######################info dependente da língua!!!####################################################################################
-my $Prep = "(de|del|von)";#<string>   ##preposiçoes que fazem parte dum NP composto
-my $Art = "(el|la|los|las)";#<string>  ##artigos que fazem parte dum NP composto
-my $currency = "(euro|euros|dólar|dólares|peseta|pesetas|yen|yenes|escudo|escudos|franco|francos|real|reales|€)";#<string> 
-my $measure = "(kg|kilogramo|quilogramo|gramo|g|centímetro|cm|hora|segundo|minuto|tonelada|tn|metro|m|km|kilómetro|quilómetro|%)";#<string> 
-my $quant = "(ciento|cientos|miles|millón|millones|billón|billones|trillón|trillones)";#<string> 
-my $cifra = "(dos|tres|catro|cinco|seis|siete|ocho|nueve|diez|cien|mil)";#<string>   ##hai que criar as cifras básicas: once, doce... veintidós, treinta y uno...
-my $meses =  "(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)";#<string> 
-######################info dependente da língua!!!####################################################################################
 
 sub ner {
     
@@ -81,7 +80,9 @@ sub ner {
 	my ($lines) = @_;#<ref><list><string>
 	my @tokens=@{$lines};#<list><string>
 
+
 	for (my $i=0; $i<=$#tokens; $i++) {#<integer>
+		utf8::decode($tokens[$i]);
 
 		##marcar fim de frase
 		$Tag{$tokens[$i]} = "";
@@ -92,56 +93,56 @@ sub ner {
 		my $k = $i - 1;#<string>
 		my $j = $i + 1;#<string>
 
-		#if  ($Lex->{$lowercase}) {print STDERR "---> #$lowercase#\n"};
+		#if  ($Ner::Lex->{$lowercase}) {print STDERR "---> #$lowercase#\n"};
 		####CADEA COM TODAS PALAVRAS EM MAIUSCULA
-		if ($tokens[$i] =~ /^$UpperCase+$/ && $tokens[$j] =~ /^$UpperCase+$/ && $Lex->{$lowercase} && $Lex->{lowercase($tokens[$j])} ) {
+		if ($tokens[$i] =~ /^$Ner::UpperCase+$/ && $tokens[$j] =~ /^$Ner::UpperCase+$/ && $Ner::Lex->{$lowercase} && $Ner::Lex->{lowercase($tokens[$j])} ) {
 			$Tag{$tokens[$i]} = "UNK"; ##identificamos cadeas de tokens so em maiusculas e estao no dicionario 
-		}elsif   ($tokens[$i] =~ /^$UpperCase+$/ && $tokens[$k] =~ /^$UpperCase+$/ && $Lex->{$lowercase} && $Lex->{lowercase($tokens[$k])} &&
+		}elsif   ($tokens[$i] =~ /^$Ner::UpperCase+$/ && $tokens[$k] =~ /^$Ner::UpperCase+$/ && $Ner::Lex->{$lowercase} && $Ner::Lex->{lowercase($tokens[$k])} &&
 			($tokens[$j] =~ /^(\#SENT\#|\<blank\>|\"|\»|\”|\.|\-|\s|\?|\!)$/ || $i == $#tokens ) ) { ##ultimo token de uma cadea com so maiusculas
 			$Tag{$tokens[$i]} = "UNK";        
 		}
 		####CADEAS ENTRE ASPAS com palavras que começam por maiuscula 
-		elsif ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$UpperCase/ && $tokens[$i+1] =~ /^$UpperCase/ && $tokens[$i+2] =~ /[\"\»\”\']/) {
+		elsif ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$Ner::UpperCase/ && $tokens[$i+1] =~ /^$Ner::UpperCase/ && $tokens[$i+2] =~ /[\"\»\”\']/) {
 			#print STDERR  "#$tokens[$i]# --- #$tokens[$k]#\n";
 			$Candidate =  $tokens[$i] . $SEP . $tokens[$i+1] ;  
 			$i = $i + 1; 
 			$tokens[$i] = $Candidate;                
-		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$UpperCase/ && $tokens[$i+1] =~ /^$UpperCase/ && $tokens[$i+2] =~ /^$UpperCase/ && $tokens[$i+3] =~ /[\"\»\”\']/) {
+		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$Ner::UpperCase/ && $tokens[$i+1] =~ /^$Ner::UpperCase/ && $tokens[$i+2] =~ /^$Ner::UpperCase/ && $tokens[$i+3] =~ /[\"\»\”\']/) {
 			#print STDERR  "#$tokens[$i]# --- #$tokens[$k]#\n";
 			$Candidate =  $tokens[$i] . $SEP . $tokens[$i+1] . $SEP . $tokens[$i+2] ;   
 			$i = $i + 2;
 			$tokens[$i] = $Candidate;            
-		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$UpperCase/ && $tokens[$i+1] =~ /^$UpperCase/ && $tokens[$i+2] =~ /^$UpperCase/ && $tokens[$i+3] =~ /^$UpperCase/ && $tokens[$i+4] =~ /[\"\»\”\']/) {
+		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$Ner::UpperCase/ && $tokens[$i+1] =~ /^$Ner::UpperCase/ && $tokens[$i+2] =~ /^$Ner::UpperCase/ && $tokens[$i+3] =~ /^$Ner::UpperCase/ && $tokens[$i+4] =~ /[\"\»\”\']/) {
 			$Candidate =  $tokens[$i] . $SEP . $tokens[$i+1] . $SEP .  $tokens[$i+2] . $SEP . $tokens[$i+3];   
 			$i = $i + 3;   
 			$tokens[$i] = $Candidate;           
-		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$UpperCase/ && $tokens[$i+1] =~ /^$UpperCase/ && $tokens[$i+2] =~ /^$UpperCase/ && $tokens[$i+3] =~ /^$UpperCase/ && $tokens[$i+4] =~ /^$UpperCase/ && $tokens[$i+5] =~ /[\"\»\”\']/) {
+		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$Ner::UpperCase/ && $tokens[$i+1] =~ /^$Ner::UpperCase/ && $tokens[$i+2] =~ /^$Ner::UpperCase/ && $tokens[$i+3] =~ /^$Ner::UpperCase/ && $tokens[$i+4] =~ /^$Ner::UpperCase/ && $tokens[$i+5] =~ /[\"\»\”\']/) {
 			$Candidate =  $tokens[$i] . $SEP . $tokens[$i+1] . $SEP .  $tokens[$i+2] . $SEP . $tokens[$i+3] . $SEP . $tokens[$i+4];   
 			$i = $i + 4;   
 			$tokens[$i] = $Candidate;           
-		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$UpperCase/ && $tokens[$i+1] =~ /^$UpperCase/ && $tokens[$i+2] =~ /^$UpperCase/ && $tokens[$i+3] =~ /^$UpperCase/ && $tokens[$i+4] =~ /^$UpperCase/  && $tokens[$i+5] && $tokens[$i+6] =~ /[\"\»\”\']/) {
+		} elsif   ($tokens[$k]  =~ /^(\"|\“|\«|\')/ && $tokens[$i] =~ /^$Ner::UpperCase/ && $tokens[$i+1] =~ /^$Ner::UpperCase/ && $tokens[$i+2] =~ /^$Ner::UpperCase/ && $tokens[$i+3] =~ /^$Ner::UpperCase/ && $tokens[$i+4] =~ /^$Ner::UpperCase/  && $tokens[$i+5] && $tokens[$i+6] =~ /[\"\»\”\']/) {
 			$Candidate =  $tokens[$i] . $SEP . $tokens[$i+1] . $SEP .  $tokens[$i+2] . $SEP . $tokens[$i+3] . $SEP . $tokens[$i+4] . $SEP . $tokens[$i+5];   
 			$i = $i + 5;   
 			$tokens[$i] = $Candidate;           
 		}
 		###Palavras que começam por maiúscula e nao estao no dicionario com maiusculas
-		elsif ( $tokens[$i] =~ /^$UpperCase/ && $Noamb->{$tokens[$i]} ) { ##começa por maiúscula e e um nome proprio nao ambiguo no dicionario
+		elsif ( $tokens[$i] =~ /^$Ner::UpperCase/ && $Ner::Noamb->{$tokens[$i]} ) { ##começa por maiúscula e e um nome proprio nao ambiguo no dicionario
 		    $Tag{$tokens[$i]} = "NP00000";
-		}elsif ( $tokens[$i] =~ /^$UpperCase/ && $Ambig{$lowercase} ) { ##começa por maiúscula e e um nome proprio ambiguo no dicionario
+		}elsif ( $tokens[$i] =~ /^$Ner::UpperCase/ && $Ner::Ambig{$lowercase} ) { ##começa por maiúscula e e um nome proprio ambiguo no dicionario
 			$Tag{$tokens[$i]} = "NP00000";
 		}
-	        #elsif   ( ($tokens[$i] =~ /^$UpperCase/) &&  !$Lex{$lowercase} && 
-		elsif    ($tokens[$i] =~ /^$UpperCase/ &&  !$StopWords->{$lowercase} &&
+	        #elsif   ( ($tokens[$i] =~ /^$Ner::UpperCase/) &&  !$Ner::Lex{$lowercase} && 
+		elsif    ($tokens[$i] =~ /^$Ner::UpperCase/ &&  !$Ner::StopWords->{$lowercase} &&
 			$tokens[$k] !~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/ && $tokens[$k] !~ /^\.\.\.$/  && $i>0 ) { ##começa por maiúscula e nao vai a principio de frase
 			$Tag{$tokens[$i]} = "NP00000";
 			#print  STDERR "1TOKEN::: ##$i## --  ##$tokens[$i]## - - #$Tag{$tokens[$i]}# --  prev:#$tokens[$k]# --  post:#$tokens[$j]#\n" if ($tokens[$i] eq "De");
 		}
-		##elsif   ( ($tokens[$i] =~ /^$UpperCase/ &&  !$Lex{$lowercase} &&
-		elsif (($tokens[$i] =~ /^$UpperCase/ &&  !$StopWords->{$lowercase} &&
+		##elsif   ( ($tokens[$i] =~ /^$Ner::UpperCase/ &&  !$Ner::Lex{$lowercase} &&
+		elsif (($tokens[$i] =~ /^$Ner::UpperCase/ &&  !$Ner::StopWords->{$lowercase} &&
 		  $tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/) || ($i==0) ) { ##começa por maiúscula e vai a principio de frase 
 			#$token = lowercase ($tokens[$i]);
 			#print STDERR "2TOKEN::: lowercase: #$lowercase# -- token: #$tokens[$i]# --  token_prev: #$tokens[$k]# --  post:#$tokens[$j]#--- #$Tag{$tokens[$i]}#\n" if ($tokens[$i] eq "De");       
-			if (!$Lex->{$lowercase} || $Ambig{$lowercase}) {
+			if (!$Ner::Lex->{$lowercase} || $Ner::Ambig{$lowercase}) {
 				#print STDERR "--AMBIG::: #$lowercase#\n";
 				$Tag{$tokens[$i]} = "NP00000"; 
 			   #print STDERR "OKKKK::: lowercase: #$lowercase# -- token: #$tokens[$i]# --  token_prev: #$tokens[$k]#  --  post:#$tokens[$j]#\n" ;       
@@ -149,14 +150,14 @@ sub ner {
 			#print STDERR "##$tokens[$i]## -  #$tokens[$k]#\n" if ($tokens[$i] eq "De");
 		}
   
-		##if   ( $tokens[$i] =~ /^$UpperCase$LowerCase+/ && ($StopWords{$lowercase} && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡)$/) || ($i==0)) ) {   }##se em principio de frase a palavra maiuscula e uma stopword, nao fazemos nada
-		if (($tokens[$i] =~ /^$UpperCase$LowerCase+/ && $Lex->{$lowercase} &&  !$Ambig{$lowercase}) && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/  || $i==0) ) {  
-			#print  STDERR "1TOKEN::: ##$lowercase## // #!$Ambig{$lowercase}# - - #$Tag{$tokens[$i]}# --  #$tokens[$k]#\n" ;      
+		##if   ( $tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/ && ($Ner::StopWords{$lowercase} && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡)$/) || ($i==0)) ) {   }##se em principio de frase a palavra maiuscula e uma stopword, nao fazemos nada
+		if (($tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/ && $Ner::Lex->{$lowercase} &&  !$Ner::Ambig{$lowercase}) && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/  || $i==0) ) {  
+			#print  STDERR "1TOKEN::: ##$lowercase## // #!$Ner::Ambig{$lowercase}# - - #$Tag{$tokens[$i]}# --  #$tokens[$k]#\n" ;      
 		}##se em principio de frase a palavra maiuscula e está no lexico sem ser ambigua, nao fazemos nada
 		##caso que seja maiuscula
 		###construimos candidatos para os NOMES PROPRIOS COMPOSTOS#############################################################
-		elsif  ($tokens[$i] =~ /^$UpperCase$LowerCase+/) {
-			#print "##$tokens[$i]## - #$Tag{$tokens[$i]}# --  #$tokens[$k]# ---- #$StopWords{$lowercase}#\n"; 
+		elsif  ($tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/) {
+			#print "##$tokens[$i]## - #$Tag{$tokens[$i]}# --  #$tokens[$k]# ---- #$Ner::StopWords{$lowercase}#\n"; 
 			$Candidate = $tokens[$i]  ;
 			#$Candidate = $tokens[$i];
 			#$Nocandidate = $tokens[$i] ;
@@ -169,11 +170,11 @@ sub ner {
 				my $j = $i + $count;#<integer>
 				#chomp $tokens[$j];
 				#print  STDERR "****Begin: ##$i## - ##$j##- #$tokens[$i]# --- #$tokens[$j]#\n";
-				if ($tokens[$j] eq "" || ($tokens[$j] =~ /^($Art)$/i && $tokens[$j-1] !~ /^($Prep)$/i) ) { #se chegamos ao final de uma frase sem ponto ou se temos um artigo sem uma preposiçao precedente, paramos (Pablo el muchacho)
+				if ($tokens[$j] eq "" || ($tokens[$j] =~ /^($Ner::Art)$/i && $tokens[$j-1] !~ /^($Ner::Prep)$/i) ) { #se chegamos ao final de uma frase sem ponto ou se temos um artigo sem uma preposiçao precedente, paramos (Pablo el muchacho)
 					$found=1;
-				}elsif ( ($tokens[$j] !~ /^$UpperCase$LowerCase+/ ||  $Candidate =~ /($Punct)|($Punct_urls)/ ) &&
-				  #($tokens[$j] !~ /^($Prep)$/ && $tokens[$j+1] !~ /^($Art)$/ && $tokens[$j+1] !~ /^$UpperCase$LowerCase+/ )  )  { 
-				  ($tokens[$j] !~ /^($Prep)$/i && $tokens[$j] !~ /^($Art)$/i )  )  { 
+				}elsif ( ($tokens[$j] !~ /^$Ner::UpperCase$Ner::LowerCase+/ ||  $Candidate =~ /($Ner::Punct)|($Ner::Punct_urls)/ ) &&
+				  #($tokens[$j] !~ /^($Ner::Prep)$/ && $tokens[$j+1] !~ /^($Ner::Art)$/ && $tokens[$j+1] !~ /^$Ner::UpperCase$Ner::LowerCase+/ )  )  { 
+				  ($tokens[$j] !~ /^($Ner::Prep)$/i && $tokens[$j] !~ /^($Ner::Art)$/i )  )  { 
 					#print  STDERR "4TOKEN::: ##$i## - ##$j## - ##$count##----> ##$tokens[$i]## - - #$tokens[$j]# --  #$tokens[$k]#\n" ;
 					$found = 1;
 				}else {
@@ -184,23 +185,23 @@ sub ner {
 				}
 			}
 			#print STDERR "---------#$count# -- #$Candidate# - #$SEP#  - #$N#\n";
-			if ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Punct$SEP/ || $Candidate !~ /$Punct_urls$SEP/) &&  $Candidate !~ /$SEP($Prep)$/ && $Candidate !~ /$SEP($Prep)$SEP($Art)$/  ) {
+			if ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Ner::Punct$SEP/ || $Candidate !~ /$Ner::Punct_urls$SEP/) &&  $Candidate !~ /$SEP($Ner::Prep)$/ && $Candidate !~ /$SEP($Ner::Prep)$SEP($Ner::Art)$/  ) {
 				#print STDERR "----------#$Candidate#\n";
 				$i = $i + $count - 1;
 				$tokens[$i] =  $Candidate ; 
-			}elsif ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Punct$SEP/ || $Candidate !~ /$Punct_urls$SEP/) &&  $Candidate =~ /$SEP($Prep)$/i ) {
+			}elsif ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Ner::Punct$SEP/ || $Candidate !~ /$Ner::Punct_urls$SEP/) &&  $Candidate =~ /$SEP($Ner::Prep)$/i ) {
 				$i = $i + $count - 2;
-				$Candidate =~ s/$SEP($Prep)$//;  
+				$Candidate =~ s/$SEP($Ner::Prep)$//;  
 				$tokens[$i] =  $Candidate ;
 				#print STDERR "OK----------#$Candidate#\n";
-			}elsif ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Punct$SEP/ || $Candidate !~ /$Punct_urls$SEP/) &&  $Candidate =~ /$SEP($Prep)$SEP($Art)$/i ) {
+			}elsif ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Ner::Punct$SEP/ || $Candidate !~ /$Ner::Punct_urls$SEP/) &&  $Candidate =~ /$SEP($Ner::Prep)$SEP($Ner::Art)$/i ) {
 				$i = $i + $count - 3;
-				$Candidate =~ s/$SEP($Prep)$SEP($Art)$//i;  
+				$Candidate =~ s/$SEP($Ner::Prep)$SEP($Ner::Art)$//i;  
 				$tokens[$i] =  $Candidate ;
 				#print STDERR "----------#$Candidate#\n"; 
-			}elsif ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Punct$SEP/ || $Candidate !~ /$Punct_urls$SEP/) &&  $Candidate =~ /SEP($Art)$/i ) {
+			}elsif ( ($count > 1) && ($count <= $N) && ($Candidate !~ /$Ner::Punct$SEP/ || $Candidate !~ /$Ner::Punct_urls$SEP/) &&  $Candidate =~ /SEP($Ner::Art)$/i ) {
 				$i = $i + $count - 2;
-				$Candidate =~ s/$SEP($Art)$//i;  
+				$Candidate =~ s/$SEP($Ner::Art)$//i;  
 				$tokens[$i] =  $Candidate ;
 				#print STDERR "----------#$Candidate#\n"; 
 			}
@@ -215,8 +216,8 @@ sub ner {
 			$Tag{$tokens[$i]} = "UNK" ; 
 		}
 		##Numeros romanos 
-                elsif ($tokens[$i] =~ /^$UpperCase/ && $Entry->{$tokens[$i]} =~ / Z$/) {
-                    $Tag{$tokens[$i]} = $Entry->{$tokens[$i]};
+                elsif ($tokens[$i] =~ /^$Ner::UpperCase/ && $Ner::Entry->{$tokens[$i]} =~ / Z$/) {
+                    $Tag{$tokens[$i]} = $Ner::Entry->{$tokens[$i]};
                     #print STDERR "OKK $tokens[$i] - #$Tag{$tokens[$i]}#\n";
                 }
 
@@ -224,8 +225,8 @@ sub ner {
 		if ($Tag{$tokens[$i]} eq "UNK") {
 			$token = lowercase ($tokens[$i]);
 			#print STDERR "2--: $tokens[$i] - $Tag{$tokens[$i]}\n";
-			if ($Lex->{$token}) {
-				$Tag{$tokens[$i]} = $Entry->{$token};
+			if ($Ner::Lex->{$token}) {
+				$Tag{$tokens[$i]} = $Ner::Entry->{$token};
 				#print STDERR "3--: $tokens[$i] - $Tag{$tokens[$i]}\n";
 			}elsif ($tokens[$i] =~ /\-/) { ##se o token é composto, dever ser um sustantivo
 				$Tag{$tokens[$i]} = "$tokens[$i] NC00000";
@@ -237,24 +238,24 @@ sub ner {
 		##os numeros, medidas e datas #USAR O FICHEIRO QUANTITIES.DAT##################
 
 		##CIFRAS OU NUMEROS
-		if ($tokens[$i] =~ /^[0-9]+$/ || $tokens[$i] =~ /^$cifra$/) {
+		if ($tokens[$i] =~ /^[0-9]+$/ || $tokens[$i] =~ /^$Ner::cifra$/) {
 			$token = $tokens[$i];
 			$Tag{$tokens[$i]} = "Z"; 
 		}         
 		##MEAUSURES
-		if  ($Tag{$tokens[$i]} =~ /^Z/ && $tokens[$i+1] =~ /^$measure(s|\.)?$/i) {
+		if  ($Tag{$tokens[$i]} =~ /^Z/ && $tokens[$i+1] =~ /^$Ner::measure(s|\.)?$/i) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] ;
 			$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: kg=kilogramo,...
 			$Tag{$tokens[$i]} = "Zu"; 
 			$adiantar=1 ;
-		}elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^$quant$/i &&  $tokens[$i+2] =~ /^$measure(s|\.)?$/i) {
+		}elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^$Ner::quant$/i &&  $tokens[$i+2] =~ /^$Ner::measure(s|\.)?$/i) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] . "_" . $tokens[$i+2]  ;
 			$token = lc ($tokens[$i]); 
 			$Tag{$tokens[$i]} = "Zu"; 
 			$adiantar=2;	        
 		}
 		##CURRENCY
-		elsif ($Tag{$tokens[$i]} =~ /^Z/ && $tokens[$i+1] =~ /^$currency$/i) {
+		elsif ($Tag{$tokens[$i]} =~ /^Z/ && $tokens[$i+1] =~ /^$Ner::currency$/i) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1];
 			$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: euros=euro...
 			$Tag{$tokens[$i]} = "Zm"; 
@@ -264,24 +265,24 @@ sub ner {
 		$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: euros=euro...
 		$Tag{$tokens[$i]} = "Zm"; 
 		$adiantar=1;        
-		} elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^$quant$/i && $tokens[$i+2] =~ /^de$/i && $tokens[$i+3] =~ /^$currency$/i) {
+		} elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^$Ner::quant$/i && $tokens[$i+2] =~ /^de$/i && $tokens[$i+3] =~ /^$Ner::currency$/i) {
 		$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] . "_" . $tokens[$i+2] . "_" . $tokens[$i+3] ;
 		$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: euros=euro...
 		$Tag{$tokens[$i]} = "Zm"; 
 		$adiantar=3;	           
-		} elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^$quant$/i && $tokens[$i+2] =~ /^$currency$/i) {
+		} elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^$Ner::quant$/i && $tokens[$i+2] =~ /^$Ner::currency$/i) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] . "_" . $tokens[$i+2]  ;
 			$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: euros=euro...
 			$Tag{$tokens[$i]} = "Zm"; 
 			$adiantar=2;	      
-		} elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^$currency$/i) {
+		} elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^$Ner::currency$/i) {
 		$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] . "_" . $tokens[$i+2] ;
 		$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: euros=euro...
 		$Tag{$tokens[$i]} = "Zm"; 
 		$adiantar=2;	          
 		}
 		##QUANTITIES
-		elsif ($Tag{$tokens[$i]} =~ /^Z/ && $tokens[$i+1] =~ /^$quant$/i) {
+		elsif ($Tag{$tokens[$i]} =~ /^Z/ && $tokens[$i+1] =~ /^$Ner::quant$/i) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] ;
 			$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: kg=kilogramo,...
 			$Tag{$tokens[$i]} = "Z"; 
@@ -289,17 +290,17 @@ sub ner {
 		}
 		
 		##DATES
-		elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^$meses$/i  && $tokens[$i+3] =~ /^de$/i && $tokens[$i+4] =~ /[0-9]+/) {
+		elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^$Ner::meses$/i  && $tokens[$i+3] =~ /^de$/i && $tokens[$i+4] =~ /[0-9]+/) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1] . "_" . $tokens[$i+2] . "_" . $tokens[$i+3] . "_" . $tokens[$i+4]  ;
 			$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: kg=kilogramo,...
 			$Tag{$tokens[$i]} = "W"; 
 			$adiantar=4;	        
-		}elsif ($tokens[$i] =~ /^$meses$/i  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^[0-9]+$/) {
+		}elsif ($tokens[$i] =~ /^$Ner::meses$/i  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^[0-9]+$/) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1]  . "_" . $tokens[$i+2] ;
 			$token = lc ($tokens[$i]);
 			$Tag{$tokens[$i]} = "W"; 
 			$adiantar=2;   
-		}elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^$meses$/i) {
+		}elsif ($Tag{$tokens[$i]} =~ /^Z/  && $tokens[$i+1] =~ /^de$/i && $tokens[$i+2] =~ /^$Ner::meses$/i) {
 			$tokens[$i] = $tokens[$i] . "_" . $tokens[$i+1]  . "_" . $tokens[$i+2] ;
 			$token = lc ($tokens[$i]); ##haveria que lematizar/normalizar o token: kg=kilogramo,...
 			$Tag{$tokens[$i]} = "W"; 
@@ -316,7 +317,7 @@ sub ner {
 			$tokens[$i] = "<blank>";
 			$token = "<blank>";
 			$Tag{$tokens[$i]} = "Fp"; 
-		}elsif ($tokens[$i] =~ /^$Punct$/ || $tokens[$i] =~ /^$Punct_urls$/ || 
+		}elsif ($tokens[$i] =~ /^$Ner::Punct$/ || $tokens[$i] =~ /^$Ner::Punct_urls$/ || 
 			$tokens[$i] =~ /^(\.\.\.|\`\`|\'\'|\<\<|\>\>|\-\-)$/ ) {
 			$Tag{$tokens[$i]} = punct ($tokens[$i]);
 			$token = $tokens[$i]; 
@@ -330,27 +331,26 @@ sub ner {
 		##parte final..
 		my $tag = $Tag{$tokens[$i]};#<string>
 		$tag = $token . " " . $tag if ( $tag =~ /^(UNK|F|NP|Z|W)/  );
-		if($pipe){#<ignore-line>
-			print "$tokens[$i] $tag\n";#<ignore-line>
-		}else{#<ignore-line>
-			push (@saida, "$tokens[$i] $tag");
-		}#<ignore-line>
+
+		push (@saida, "$tokens[$i] $tag");
+
 		if($Tag{$tokens[$i]} eq "Fp"){
-			if($pipe){#<ignore-line>
-				print "\n";#<ignore-line>
-			}else{#<ignore-line>
-				push (@saida, "");
-			}#<ignore-line>
+		
+			push (@saida, "");
+
 		}
 
 		$Tag{$tokens[$i]} = "";
 		$i += $adiantar if ($adiantar); ##adiantar o contador se foram encontradas expressoes compostas    
 	}
+	print join("\n", @saida);
 	return \@saida;
 }
 
 #<ignore-block>
-if($pipe){
+$Sentences::pipe = !defined (caller);
+init();
+if($Sentences::pipe){
 	my @lines=<STDIN>;
 
 	for (my $i=0; $i<=$#lines; $i++) {
