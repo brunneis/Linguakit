@@ -10,7 +10,6 @@
 package Tagger;
 
 #<ignore-block>
-use Storable qw(dclone);
 use strict; 
 binmode STDIN, ':utf8';
 binmode STDOUT, ':utf8';
@@ -19,6 +18,8 @@ use utf8;
 
 
 sub init() {
+	use Storable qw(dclone);
+
 	# Absolute path 
 	use File::Basename;#<ignore-line>
 	my $abs_path = ".";#<string>
@@ -82,9 +83,9 @@ sub init() {
 sub tagger {
 
 	$Tagger::N = $Tagger::N_init;#<double>
-	%Tagger::PriorProb = dclone(\$Tagger::PriorProb_init);#<hash><hash><double>
-	%Tagger::ProbCat = dclone(\$Tagger::ProbCat_init);#<hash><double>
-	%Tagger::featFreq = dclone(\$Tagger::featFreq_init);#<hash><double>
+	%Tagger::PriorProb = %{dclone(\%Tagger::PriorProb_init)};#<hash><hash><double>
+	%Tagger::ProbCat = %{dclone(\%Tagger::ProbCat_init)};#<hash><double>
+	%Tagger::featFreq = %{dclone(\%Tagger::featFreq_init)};#<hash><double>
 
 	my @saida=();#<list><string>
 	my ($text) = @_;#<ref><list><string>
