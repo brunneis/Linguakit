@@ -355,14 +355,15 @@ sub tagger {
 	} 
 	#print STDERR "number of sentences: #$s#\n";
 	print join("\n", @saida);
+	print "EOC\n";
 	return \@saida;
 }
 
 #<ignore-block>
-$Sentences::pipe = !defined (caller);
 init();
-if($Sentences::pipe){
-	my @lines=<STDIN>;
+for(;;) {
+	my $value=<STDIN>;
+	my @lines = eval($value);
 	tagger(\@lines);
 }
 #<ignore-block>

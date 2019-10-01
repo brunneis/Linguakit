@@ -31,10 +31,7 @@ sub init() {
 
 	##variaveis globais
 	##para sentences e tokens:
-	my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
 	my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
-	my $Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\-\€\·\¬\…]/;#<string>
-	my $Punct_urls = qr/[\:\/\~]/;#<string>
 
 	##para splitter:
 	##########INFORMAÇAO DEPENDENTE DA LINGUA###################
@@ -354,14 +351,15 @@ sub splitter {
 		#}
 	}
 	print join("\n", @saida);
+	print "EOC\n";
 	return \@saida;
 }
 
 #<ignore-block>
-$Sentences::pipe = !defined (caller);
 init();
-if($Sentences::pipe){
-	my @lines=<STDIN>;
+for(;;) {
+	my $value=<STDIN>;
+	my @lines = eval($value);
 	splitter(\@lines);
 }
 #<ignore-block>
@@ -373,7 +371,3 @@ sub lowercase {
 
 	return $x;
 } 
-
-        
-
-

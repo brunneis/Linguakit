@@ -38,9 +38,6 @@ sub init() {
 	##para sentences e tokens:
 	$Ner::UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ]";#<string>
 	$Ner::LowerCase = "[a-záéíóúàèìòùâêîôûñçüãẽĩõũ]";#<string>
-	$Ner::Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…\-\+]/;#<string>
-	$Ner::Punct_urls = qr/[\:\/\~]/;#<string>
-	my $w = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ-záéíóúàèìòùâêîôûñçüüãẽĩõũ]";#<string>
 
 	##########CARGANDO RECURSOS COMUNS
 	##cargando o lexico freeling e mais variaveis globais
@@ -133,13 +130,13 @@ sub ner {
 		}
 	        #elsif   ( ($tokens[$i] =~ /^$Ner::UpperCase/) &&  !$Ner::Lex{$lowercase} && 
 		elsif    ($tokens[$i] =~ /^$Ner::UpperCase/ &&  !$Ner::StopWords->{$lowercase} &&
-			$tokens[$k] !~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/ && $tokens[$k] !~ /^\.\.\.$/  && $i>0 ) { ##começa por maiúscula e nao vai a principio de frase
+			$tokens[$k] !~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\u00A1|\?|\!|\:|\`\`)$/ && $tokens[$k] !~ /^\.\.\.$/  && $i>0 ) { ##começa por maiúscula e nao vai a principio de frase
 			$Tag{$tokens[$i]} = "NP00000";
 			#print  STDERR "1TOKEN::: ##$i## --  ##$tokens[$i]## - - #$Tag{$tokens[$i]}# --  prev:#$tokens[$k]# --  post:#$tokens[$j]#\n" if ($tokens[$i] eq "De");
 		}
 		##elsif   ( ($tokens[$i] =~ /^$Ner::UpperCase/ &&  !$Ner::Lex{$lowercase} &&
 		elsif (($tokens[$i] =~ /^$Ner::UpperCase/ &&  !$Ner::StopWords->{$lowercase} &&
-		  $tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/) || ($i==0) ) { ##começa por maiúscula e vai a principio de frase 
+		  $tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\u00A1|\?|\!|\:|\`\`)$/) || ($i==0) ) { ##começa por maiúscula e vai a principio de frase 
 			#$token = lowercase ($tokens[$i]);
 			#print STDERR "2TOKEN::: lowercase: #$lowercase# -- token: #$tokens[$i]# --  token_prev: #$tokens[$k]# --  post:#$tokens[$j]#--- #$Tag{$tokens[$i]}#\n" if ($tokens[$i] eq "De");       
 			if (!$Ner::Lex->{$lowercase} || $Ner::Ambig{$lowercase}) {
@@ -150,8 +147,8 @@ sub ner {
 			#print STDERR "##$tokens[$i]## -  #$tokens[$k]#\n" if ($tokens[$i] eq "De");
 		}
   
-		##if   ( $tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/ && ($Ner::StopWords{$lowercase} && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡)$/) || ($i==0)) ) {   }##se em principio de frase a palavra maiuscula e uma stopword, nao fazemos nada
-		if (($tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/ && $Ner::Lex->{$lowercase} &&  !$Ner::Ambig{$lowercase}) && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\¡|\?|\!|\:|\`\`)$/  || $i==0) ) {  
+		##if   ( $tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/ && ($Ner::StopWords{$lowercase} && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\u00A1)$/) || ($i==0)) ) {   }##se em principio de frase a palavra maiuscula e uma stopword, nao fazemos nada
+		if (($tokens[$i] =~ /^$Ner::UpperCase$Ner::LowerCase+/ && $Ner::Lex->{$lowercase} &&  !$Ner::Ambig{$lowercase}) && ($tokens[$k]  =~ /^(\#SENT\#|\<blank\>|\"|\“|\«|\.|\-|\s|\¿|\u00A1|\?|\!|\:|\`\`)$/  || $i==0) ) {  
 			#print  STDERR "1TOKEN::: ##$lowercase## // #!$Ner::Ambig{$lowercase}# - - #$Tag{$tokens[$i]}# --  #$tokens[$k]#\n" ;      
 		}##se em principio de frase a palavra maiuscula e está no lexico sem ser ambigua, nao fazemos nada
 		##caso que seja maiuscula
@@ -344,14 +341,15 @@ sub ner {
 		$i += $adiantar if ($adiantar); ##adiantar o contador se foram encontradas expressoes compostas    
 	}
 	print join("\n", @saida);
+	print "EOC\n";
 	return \@saida;
 }
 
 #<ignore-block>
-$Sentences::pipe = !defined (caller);
 init();
-if($Sentences::pipe){
-	my @lines=<STDIN>;
+for(;;) {
+	my $value=<STDIN>;
+	my @lines = eval($value);
 
 	for (my $i=0; $i<=$#lines; $i++) {
 		chomp $lines[$i];
@@ -397,7 +395,7 @@ sub punct {
 		$result = "Fia"; 
 	}elsif ($p eq "\?") {
 		$result = "Fit"; 
-	}elsif ($p eq "\¡") {
+	}elsif ($p eq "\u00A1") {
 		$result = "Faa"; 
 	}elsif ($p eq "\!") {
 		$result = "Fat"; 

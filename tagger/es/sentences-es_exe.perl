@@ -94,15 +94,16 @@ sub sentences {
 
 	}
 	print join("\n", @saida);
+	print "EOC\n";
 	return \@saida;
 
 }
 
 #<ignore-block>
-$Sentences::pipe = !defined (caller);
 init();
-if($Sentences::pipe){
-	my @lines=<STDIN>;
-	sentences(\@lines);
+for(;;) {
+	my $value=<STDIN>;
+	my @input = eval($value);
+	sentences(\@input);
 }
 #<ignore-block>

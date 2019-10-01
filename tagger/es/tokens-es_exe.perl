@@ -13,6 +13,7 @@ use strict;
 binmode STDIN, ':utf8';
 binmode STDOUT, ':utf8';
 use utf8;
+
 #<ignore-block>
 
 sub init {
@@ -22,9 +23,6 @@ sub init {
 	$abs_path = dirname(__FILE__);#<ignore-line>
 
 	##variaveis globais
-	##para sentences e tokens:
-	my $UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜ]";#<string>
-	my $LowerCase = "[a-záéíóúàèìòùâêîôûñçü]";#<string>
 	$Tokens::Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…]/;#<string>
 	$Tokens::Punct_urls = qr/[\:\/\~]/;#<string>
 
@@ -55,6 +53,8 @@ sub tokens {
 
 	foreach my $sentence (@{$sentences}) {
 		chomp $sentence;
+
+		utf8::upgrade($sentence);
 
 		#substituir puntuaçoes 
 
@@ -106,14 +106,16 @@ sub tokens {
 	}
 	
 	print join("\n", @saida);
+	print "EOC\n";
 	return \@saida;
 }
 
+
 #<ignore-block>
-$Sentences::pipe = !defined (caller);
 init();
-if($Sentences::pipe){
-	my @tokens=<STDIN>;
+for(;;) {
+	my $value=<STDIN>;
+	my @tokens = eval($value);
 	tokens(\@tokens);
 }
 #<ignore-block>
@@ -188,22 +190,4 @@ sub punct {
 		$result = "Flt"; 
 	}
 	return $result;
-}
-
-
-sub lowercase {
-  my ($x) = @_ ;#<string>
-  $x = lc ($x);
-  $x =~  tr/ÁÉÍÓÚÇÑ/áéíóúçñ/;
-
-  return $x;
-} 
-
-sub Trim {
-  my ($x) = @_ ;#<string>
-
-  $x =~ s/^[\s]*//;  
-  $x =~ s/[\s]$//;  
-
-  return $x;
 }

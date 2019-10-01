@@ -225,15 +225,18 @@ sub nbayes{
 		$NBayes::total++;
 		$NBayes::peso_total += 1;
 		print "$lines\tPOSITIVE\t1";
+		print "EOC\n";
 		return "$lines\tPOSITIVE\t1";
 	} elsif ($POS_EMOT < $NEG_EMOT){#if there is more negative emoticons: negative
 		$NBayes::total++;
 		$NBayes::peso_total -= 1;
 		print "$lines\tNEGATIVE\t1";
+		print "EOC\n";
 		return "$lines\tNEGATIVE\t1";
 	} elsif (!$LEX) {
 	        $NBayes::total++;
 		print "$lines\t$default_value\t1"; #if there is no lemma from the polartity lexicon: NONE.
+		print "EOC\n";
 		return "$lines\t$default_value\t1"; #if there is no lemma from the polartity lexicon: NONE.
 	}
 
@@ -275,7 +278,8 @@ sub nbayes{
 
 	if (!$found) {
 	        $NBayes::total++;
-		print "$lines\t$default_value\t1"; 
+		print "$lines\t$default_value\t1";
+		print "EOC\n";
 		return "$lines\t$default_value\t1"; 
 	} else {
 		foreach my $c (sort {$PostProb{$b} <=> $PostProb{$a} } keys %PostProb ) {
@@ -289,42 +293,19 @@ sub nbayes{
 			    $NBayes::total++;
 			}
 			print "$lines\t$c\t$PostProb{$c}";
+			print "EOC\n";
 			return "$lines\t$c\t$PostProb{$c}";
 		}
-	}
-	
+	}	
 }
 
-sub end {
-    #print STDERR "total=#$NBayes::total# -- peso=#$NBayes::peso_total#\n";
-    my $c=0;#<doubled>
-    if ($NBayes::total == 1 && $NBayes::peso_total == 0) {
-	   return "TOTAL\tNONE\t1\n"; 
-    }
-    else {
-        $NBayes::result = $NBayes::peso_total / $NBayes::total;
-	
-	if ($NBayes::peso_total >= 0) {
-	   $c = "POSITIVE"
-	}
-	elsif ($NBayes::peso_total <= 0) {
-	   $c = "NEGATIVE"
-	}
-	else {
-	   $c = "NONE"
-	}
-	$NBayes::result = abs ($NBayes::result);
-	return "TOTAL\t$c\t$NBayes::result\n";
-    }
-}
 
 #<ignore-block>
-$Sentences::pipe = !defined (caller);
 init();
-if($Sentences::pipe){
-	my $lang = shift(@ARGV);
-	load($lang);
-	my @lines=<STDIN>;
+eval(<STDIN>); # load language
+for(;;) {
+	my $value=<STDIN>;
+	my @lines = eval($value);
 	nbayes(\@lines);
 }
 #<ignore-block>
