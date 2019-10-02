@@ -105,8 +105,8 @@ sub tokens {
 		
 	}
 	
-	print join("\n", @saida);
-	print "EOC\n";
+	print "\n".join("\n", @saida);
+	print "\nEOC";
 	return \@saida;
 }
 

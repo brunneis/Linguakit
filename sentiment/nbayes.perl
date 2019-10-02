@@ -225,18 +225,18 @@ sub nbayes{
 		$NBayes::total++;
 		$NBayes::peso_total += 1;
 		print "$lines\tPOSITIVE\t1";
-		print "EOC\n";
+		print "\nEOC\n";
 		return "$lines\tPOSITIVE\t1";
 	} elsif ($POS_EMOT < $NEG_EMOT){#if there is more negative emoticons: negative
 		$NBayes::total++;
 		$NBayes::peso_total -= 1;
 		print "$lines\tNEGATIVE\t1";
-		print "EOC\n";
+		print "\nEOC\n";
 		return "$lines\tNEGATIVE\t1";
 	} elsif (!$LEX) {
 	        $NBayes::total++;
 		print "$lines\t$default_value\t1"; #if there is no lemma from the polartity lexicon: NONE.
-		print "EOC\n";
+		print "\nEOC\n";
 		return "$lines\t$default_value\t1"; #if there is no lemma from the polartity lexicon: NONE.
 	}
 
@@ -279,7 +279,7 @@ sub nbayes{
 	if (!$found) {
 	        $NBayes::total++;
 		print "$lines\t$default_value\t1";
-		print "EOC\n";
+		print "\nEOC\n";
 		return "$lines\t$default_value\t1"; 
 	} else {
 		foreach my $c (sort {$PostProb{$b} <=> $PostProb{$a} } keys %PostProb ) {
@@ -293,7 +293,7 @@ sub nbayes{
 			    $NBayes::total++;
 			}
 			print "$lines\t$c\t$PostProb{$c}";
-			print "EOC\n";
+			print "\nEOC\n";
 			return "$lines\t$c\t$PostProb{$c}";
 		}
 	}	

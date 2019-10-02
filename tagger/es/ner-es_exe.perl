@@ -340,8 +340,8 @@ sub ner {
 		$Tag{$tokens[$i]} = "";
 		$i += $adiantar if ($adiantar); ##adiantar o contador se foram encontradas expressoes compostas    
 	}
-	print join("\n", @saida);
-	print "EOC\n";
+	print "\n".join("\n", @saida);
+	print "\nEOC";
 	return \@saida;
 }
 
