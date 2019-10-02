@@ -47,7 +47,7 @@ sub init {
 
 sub sentences {
 	my @saida = ();#<list><string>
-	my $lines = $_[0];#<ref><list><string>
+	my ($lines) = @_;#<ref><list><string>
 
 	foreach my $texto (@{$lines}) {
 		chomp $texto;
@@ -103,7 +103,7 @@ sub sentences {
 init();
 for(;;) {
 	my $value=<STDIN>;
-	my @input = eval($value);
-	sentences(\@input);
+	my @lines = eval($value);
+	sentences(\@lines);
 }
 #<ignore-block>
