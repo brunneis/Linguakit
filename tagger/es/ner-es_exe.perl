@@ -38,6 +38,8 @@ sub init() {
 	##para sentences e tokens:
 	$Ner::UpperCase = "[A-ZÁÉÍÓÚÀÈÌÒÙÂÊÎÔÛÑÇÜÃẼÕĨŨ]";#<string>
 	$Ner::LowerCase = "[a-záéíóúàèìòùâêîôûñçüãẽĩõũ]";#<string>
+	$Ner::Punct =  qr/[\,\;\«\»\“\”\'\"\&\$\#\=\(\)\<\>\!\¡\?\¿\\\[\]\{\}\|\^\*\€\·\¬\…\-\+]/;#<string>
+	$Ner::Punct_urls = qr/[\:\/\~]/;#<string>
 
 	##########CARGANDO RECURSOS COMUNS
 	##cargando o lexico freeling e mais variaveis globais
@@ -79,7 +81,6 @@ sub ner {
 
 
 	for (my $i=0; $i<=$#tokens; $i++) {#<integer>
-		utf8::decode($tokens[$i]);
 
 		##marcar fim de frase
 		$Tag{$tokens[$i]} = "";
@@ -165,6 +166,7 @@ sub ner {
 			#while ( (!$found) && ($count < $N) )    {
 			while  (!$found) {
 				my $j = $i + $count;#<integer>
+
 				#chomp $tokens[$j];
 				#print  STDERR "****Begin: ##$i## - ##$j##- #$tokens[$i]# --- #$tokens[$j]#\n";
 				if ($tokens[$j] eq "" || ($tokens[$j] =~ /^($Ner::Art)$/i && $tokens[$j-1] !~ /^($Ner::Prep)$/i) ) { #se chegamos ao final de uma frase sem ponto ou se temos um artigo sem uma preposiçao precedente, paramos (Pablo el muchacho)
@@ -178,7 +180,7 @@ sub ner {
 					$Candidate .= $SEP . $tokens[$j] ;
 					#$Nocandidate .=  " " . $tokens[$j] ; 
 					$count++;
-					#print STDERR "okk: #$Candidate#\n";                 
+					#print STDERR "okk: #$Candidate#\n";
 				}
 			}
 			#print STDERR "---------#$count# -- #$Candidate# - #$SEP#  - #$N#\n";
