@@ -12,7 +12,7 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-sub init() {
+sub init {
 	use Storable qw(dclone);
 
 	# Absolute path 
@@ -30,9 +30,7 @@ sub init() {
 	$NBayes::total_init=0;#<integer>
 	$NBayes::peso_total_init=0;#<double>
 	$NBayes::result_init=0;#<double>
-}
 
-sub load{
 	my ($lang) = @_;#<string>
 
 	my $TRAIN;#<file>
@@ -301,7 +299,6 @@ sub nbayes{
 
 
 #<ignore-block>
-init();
 eval(<STDIN>); # load language
 for(;;) {
 	my $value=<STDIN>;

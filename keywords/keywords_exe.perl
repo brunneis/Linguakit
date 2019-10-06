@@ -13,40 +13,45 @@ binmode STDOUT, ':utf8';
 use utf8;
 #<ignore-block>
 
-# Pipe
-my $pipe = !defined (caller);#<ignore-line> 
 
-# Absolute path 
-use Cwd 'abs_path';#<ignore-line>
-use File::Basename;#<ignore-line>
-my $abs_path = ".";#<string>
-$abs_path = dirname(__FILE__);#<ignore-line>
+sub init {
+	# Absolute path 
+	use Cwd 'abs_path';#<ignore-line>
+	use File::Basename;#<ignore-line>
+	my $abs_path = ".";#<string>
+	$abs_path = dirname(__FILE__);#<ignore-line>
 
 
-my @ref;#<array><string>
-my @stop;#<array><string>
+	@Keywords::ref;#<array><string>
+	@Keywords::stop;#<array><string>
 
-sub load{
-	my ($lang) = @_;
+	($Keywords::lang) = @_;
 
 	##Language resources
 	my ($REF, $STOP);#<file>
-	open ($REF, $abs_path."/recursos/ref_$lang") or die "O ficheiro ref_$lang não pode ser aberto: $!\n";
+	open ($REF, $abs_path."/recursos/ref_$Keywords::lang") or die "O ficheiro ref_$Keywords::lang não pode ser aberto: $!\n";
 	binmode $REF, ':utf8';#<ignore-line>
 
-	open ($STOP, $abs_path."/recursos/stopwords_$lang") or die "O ficheiro stopwords_$lang não pode ser aberto: $!\n";
+	open ($STOP, $abs_path."/recursos/stopwords_$Keywords::lang") or die "O ficheiro stopwords_$Keywords::lang não pode ser aberto: $!\n";
 	binmode $STOP, ':utf8';#<ignore-line>
 
-	@ref = <$REF>;#<array><string>
-	@stop = <$STOP>;#<array><string>
+	@Keywords::ref = <$REF>;#<array><string>
+	@Keywords::stop = <$STOP>;#<array><string>
 
+	####Reading file with stopwords and NP errors
+
+	chomp $Keywords::stop[0];
+	(my $tmp, $Keywords::ErrosNP) = split ('\t', $Keywords::stop[0]);#<string>
+	$Keywords::ErrosNP =~ s/ /\|/g;
+	#print STDERR "#$Keywords::ErrosNP#\n";
+
+	chomp $Keywords::stop[1];
+	(my $tmp, $Keywords::Stopwords) = split ('\t', $Keywords::stop[1]);#<string>
+	$Keywords::Stopwords =~ s/ /\|/g;
 }
 
-
 sub keywords {
-
 	my $texto = $_ [0];#<ref><array><string>
-	my $lang = $_ [1];#<string>
 	my $th = 30;#<integer>
 
 	if (@_ > 2 && $_[2]){
@@ -62,20 +67,9 @@ sub keywords {
 	my $N=0;#<integer>
 	my %TOKEN;#<ignore-line>
 
-	####Reading file with stopwords and NP errors
-
-	chomp $stop[0];
-	my ($tmp, $ErrosNP) = split ('\t', $stop[0]);#<string>
-	$ErrosNP =~ s/ /\|/g;
-	#print STDERR "#$ErrosNP#\n";
-
-	chomp $stop[1];
-	my ($tmp, $Stopwords) = split ('\t', $stop[1]);#<string>
-	$Stopwords =~ s/ /\|/g;
-
 	####Reading file with reference or language model
 
-	foreach my $line (@ref) {
+	foreach my $line (@Keywords::ref) {
 		chomp $line;
 		my ($lemma, $cat, $freq) = split(qr/ /, $line);#<string>
 		$cat =~ s/^J$/A/;
@@ -90,8 +84,8 @@ sub keywords {
 		#print STDERR "LINE:#$line#\n";
 		my ($token, $lemma, $tag) = split(qr/ /, $line);#<string>
 		$lemma = $token if ($tag =~ /^NP/ || $tag =~ /^NNP/);
-		next if ($token =~ /^($ErrosNP)(s?)$/ && ($tag =~ /^NP/ || $tag =~ /^NNP/));
-		next if ($lemma =~ /^($Stopwords)$/);
+		next if ($token =~ /^($Keywords::ErrosNP)(s?)$/ && ($tag =~ /^NP/ || $tag =~ /^NNP/));
+		next if ($lemma =~ /^($Keywords::Stopwords)$/);
 		next if ($lemma =~ /([0-9]+)/) ;
 		next if ($token =~ /^[\(\)\[\]]/) ;
 		next if ($lemma =~ /^[a-z]$/) ;
@@ -156,27 +150,25 @@ sub keywords {
 		my ($w, $cat) = split (qr/ /, $k);#<string>  
 		if ($i<=$th) {
 			$w =~ s/_/ /g;  
-			if($pipe){#<ignore-line>
-				print "$w\t$chiSquare\t$cat\n"#<ignore-line>
-			}else{#<ignore-line>
-				push (@saida, "$w\t$chiSquare\t$cat");  
-			}#<ignore-line>
+			push (@saida, "$w\t$chiSquare\t$cat");  
 		}else {
 			last;
 		}
 	}
+	print join("\n", @saida);
+	print "\nEOC";
 	return \@saida;
 }
 
 #<ignore-block>
-if($pipe){
-	my $lang = shift(@ARGV);
-	my $th = shift(@ARGV);
-	load($lang);
-	my @tagged = <STDIN>;
-	keywords(\@tagged, $lang, $th);
+eval(<STDIN>); # load language
+for(;;) {
+	my $value=<STDIN>;
+	my @params = eval($value);
+	my $th = shift(@params);
+	keywords(\@params, $th);
 }
-#<ignore-block> 
+#<ignore-block>
 
 sub trim {    #remove all leading and trailing spaces
 	my $str = $_[0];#<string>
